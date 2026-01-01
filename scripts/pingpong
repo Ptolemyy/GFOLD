@@ -1,0 +1,34 @@
+SET LASTID TO "".
+PRINT "pingpong running (VolumeFile API, no CHR).".
+
+IF NOT EXISTS("comm.txt") {
+  CREATE("comm.txt").
+  OPEN("comm.txt"):WRITELN("INIT").
+}
+
+UNTIL FALSE {
+
+  // 因为我们写回时会 CLEAR + WRITELN，文件永远只有一行
+  SET line TO OPEN("comm.txt"):READALL:STRING.
+
+  IF line:STARTSWITH("PING,") {
+    SET parts TO line:SPLIT(",").
+    IF parts:LENGTH >= 2 {
+      SET id TO parts[1].
+
+      IF id <> LASTID {
+        SET LASTID TO id.
+
+        SET reply TO "PONG," + id + "," + ROUND(TIME:SECONDS,3).
+
+        SET f TO OPEN("comm.txt").
+        f:CLEAR().
+        f:WRITELN(reply).
+
+        PRINT "Reply: " + reply.
+      }
+    }
+  }
+
+  WAIT 0.02.
+}

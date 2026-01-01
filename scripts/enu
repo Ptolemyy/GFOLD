@@ -1,0 +1,70 @@
+// ===== Parameters =====
+SET KERBIN_R TO 600000.
+SET LAT0 TO -0.0972.
+SET LON0 TO -74.5577.
+SET ALT0 TO 0.
+
+SET DEG2RAD TO CONSTANT:PI / 180.
+
+// ===== Comm files =====
+SET SEND_FILE TO "send.txt".
+SET RECV_FILE TO "receive.txt".
+SET MODE TO 0.
+
+// Make sure receive.txt exists for PC side to use later
+IF NOT EXISTS(RECV_FILE) {
+  LOG "READY" TO RECV_FILE.
+}.
+
+// ===== Loop: compute ENU + velocity, write to send.txt =====
+UNTIL FALSE {
+  // ===== Current state =====
+  SET CUR_LAT TO SHIP:LATITUDE.
+  SET CUR_LON TO SHIP:LONGITUDE.
+  SET CUR_ALT TO SHIP:ALTITUDE.
+
+  // Wrap longitude difference to [-180, 180]
+  SET DLON_DEG TO CUR_LON - LON0.
+  IF DLON_DEG > 180 { SET DLON_DEG TO DLON_DEG - 360. }.
+  IF DLON_DEG < -180 { SET DLON_DEG TO DLON_DEG + 360. }.
+
+  // Convert to radians
+  SET DLAT TO (CUR_LAT - LAT0) * DEG2RAD.
+  SET DLON TO DLON_DEG * DEG2RAD.
+
+  SET LAT0_RAD TO LAT0 * DEG2RAD.
+  SET RE TO KERBIN_R + ALT0.
+
+  // ===== Local ENU (m) =====
+  SET NORTH_M TO DLAT * RE.
+  SET EAST_M  TO DLON * RE * COS(LAT0_RAD).
+  SET UP_M    TO CUR_ALT - ALT0.
+
+  // ===== Velocity =====
+  SET SPEED TO SHIP:VELOCITY:SURFACE:MAG.
+  SET VH TO SHIP:GROUNDSPEED.
+  SET VU TO SHIP:VERTICALSPEED.
+
+  SET HDG TO SHIP:HEADING * DEG2RAD.
+  SET VN TO VH * COS(HDG).
+  SET VE TO VH * SIN(HDG).
+
+  // ===== Pack and write to send.txt =====
+  // Format: MODE,E,N,U,VE,VN,VU,SPEED
+  SET OUT_LINE TO MODE + "," +
+                 ROUND(EAST_M,1) + "," +
+                 ROUND(NORTH_M,1) + "," +
+                 ROUND(UP_M,1) + "," +
+                 ROUND(VE,2) + "," +
+                 ROUND(VN,2) + "," +
+                 ROUND(VU,2) + "," +
+                 ROUND(SPEED,2).
+
+  // Overwrite send.txt each tick (delete then write to avoid stale data)
+  IF EXISTS(SEND_FILE) { DELETE SEND_FILE. }.
+  LOG OUT_LINE TO SEND_FILE.
+
+  PRINT "SEND: " + OUT_LINE.
+
+  WAIT 0.05.
+}
