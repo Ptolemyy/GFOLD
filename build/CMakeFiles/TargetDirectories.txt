@@ -1,6 +1,6 @@
 C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/test_solver.dir
+C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/GFOLD_demo.dir
 C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/find_tf.dir
-C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/find_tf_2.dir
 C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/kos_pingpong.dir
 C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/package.dir
 C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/package_source.dir

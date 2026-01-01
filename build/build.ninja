@@ -96,6 +96,70 @@ build test_solver.exe: CXX_EXECUTABLE_LINKER__test_solver_Release CMakeFiles/tes
   TARGET_SUPPORT_DIR = CMakeFiles\test_solver.dir
 
 # =============================================================================
+# Object build statements for EXECUTABLE target GFOLD_demo
+
+
+#############################################
+# Order-only phony target for GFOLD_demo
+
+build cmake_object_order_depends_target_GFOLD_demo: phony || cmake_object_order_depends_target_cpg
+
+build CMakeFiles/GFOLD_demo.dir/GFOLD_demo.cpp.obj: CXX_COMPILER__GFOLD_demo_unscanned_Release C$:/Users/32796/Desktop/GFOLD/GFOLD_demo.cpp || cmake_object_order_depends_target_GFOLD_demo
+  CONFIG = Release
+  DEP_FILE = CMakeFiles\GFOLD_demo.dir\GFOLD_demo.cpp.obj.d
+  FLAGS = -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -std=gnu++17
+  INCLUDES = -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/AppData/Local/Programs/Python/Python311/Include
+  OBJECT_DIR = CMakeFiles\GFOLD_demo.dir
+  OBJECT_FILE_DIR = CMakeFiles\GFOLD_demo.dir
+  TARGET_COMPILE_PDB = CMakeFiles\GFOLD_demo.dir\
+  TARGET_PDB = GFOLD_demo.pdb
+  TARGET_SUPPORT_DIR = CMakeFiles\GFOLD_demo.dir
+
+build CMakeFiles/GFOLD_demo.dir/GFOLD_solver.cpp.obj: CXX_COMPILER__GFOLD_demo_unscanned_Release C$:/Users/32796/Desktop/GFOLD/GFOLD_solver.cpp || cmake_object_order_depends_target_GFOLD_demo
+  CONFIG = Release
+  DEP_FILE = CMakeFiles\GFOLD_demo.dir\GFOLD_solver.cpp.obj.d
+  FLAGS = -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -std=gnu++17
+  INCLUDES = -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/AppData/Local/Programs/Python/Python311/Include
+  OBJECT_DIR = CMakeFiles\GFOLD_demo.dir
+  OBJECT_FILE_DIR = CMakeFiles\GFOLD_demo.dir
+  TARGET_COMPILE_PDB = CMakeFiles\GFOLD_demo.dir\
+  TARGET_PDB = GFOLD_demo.pdb
+  TARGET_SUPPORT_DIR = CMakeFiles\GFOLD_demo.dir
+
+build CMakeFiles/GFOLD_demo.dir/find_tf_2.cpp.obj: CXX_COMPILER__GFOLD_demo_unscanned_Release C$:/Users/32796/Desktop/GFOLD/find_tf_2.cpp || cmake_object_order_depends_target_GFOLD_demo
+  CONFIG = Release
+  DEP_FILE = CMakeFiles\GFOLD_demo.dir\find_tf_2.cpp.obj.d
+  FLAGS = -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -std=gnu++17
+  INCLUDES = -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/AppData/Local/Programs/Python/Python311/Include
+  OBJECT_DIR = CMakeFiles\GFOLD_demo.dir
+  OBJECT_FILE_DIR = CMakeFiles\GFOLD_demo.dir
+  TARGET_COMPILE_PDB = CMakeFiles\GFOLD_demo.dir\
+  TARGET_PDB = GFOLD_demo.pdb
+  TARGET_SUPPORT_DIR = CMakeFiles\GFOLD_demo.dir
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target GFOLD_demo
+
+
+#############################################
+# Link the executable GFOLD_demo.exe
+
+build GFOLD_demo.exe: CXX_EXECUTABLE_LINKER__GFOLD_demo_Release CMakeFiles/GFOLD_demo.dir/GFOLD_demo.cpp.obj CMakeFiles/GFOLD_demo.dir/GFOLD_solver.cpp.obj CMakeFiles/GFOLD_demo.dir/find_tf_2.cpp.obj | p4_cpg_solver/c/out/cpg.lib || p4_cpg_solver/c/out/cpg.lib
+  CONFIG = Release
+  FLAGS = -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt
+  LINK_FLAGS = -Xlinker /subsystem:console -fuse-ld=lld-link
+  LINK_LIBRARIES = p4_cpg_solver/c/out/cpg.lib  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -loldnames
+  OBJECT_DIR = CMakeFiles\GFOLD_demo.dir
+  POST_BUILD = cd .
+  PRE_LINK = cd .
+  TARGET_COMPILE_PDB = CMakeFiles\GFOLD_demo.dir\
+  TARGET_FILE = GFOLD_demo.exe
+  TARGET_IMPLIB = GFOLD_demo.lib
+  TARGET_PDB = GFOLD_demo.pdb
+  TARGET_SUPPORT_DIR = CMakeFiles\GFOLD_demo.dir
+
+# =============================================================================
 # Object build statements for EXECUTABLE target find_tf
 
 
@@ -137,49 +201,6 @@ build find_tf.exe: CXX_EXECUTABLE_LINKER__find_tf_Release CMakeFiles/find_tf.dir
   TARGET_IMPLIB = find_tf.lib
   TARGET_PDB = find_tf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\find_tf.dir
-
-# =============================================================================
-# Object build statements for EXECUTABLE target find_tf_2
-
-
-#############################################
-# Order-only phony target for find_tf_2
-
-build cmake_object_order_depends_target_find_tf_2: phony || cmake_object_order_depends_target_cpg
-
-build CMakeFiles/find_tf_2.dir/find_tf_2.cpp.obj: CXX_COMPILER__find_tf_2_unscanned_Release C$:/Users/32796/Desktop/GFOLD/find_tf_2.cpp || cmake_object_order_depends_target_find_tf_2
-  CONFIG = Release
-  DEFINES = -DPy_NO_LINK_LIB
-  DEP_FILE = CMakeFiles\find_tf_2.dir\find_tf_2.cpp.obj.d
-  FLAGS = -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -std=gnu++17
-  INCLUDES = -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -isystem C:/Users/32796/AppData/Local/Programs/Python/Python311/Include -isystem C:/libs/pybind11/include -isystem C:/libs/matplotlibcpp17/include
-  OBJECT_DIR = CMakeFiles\find_tf_2.dir
-  OBJECT_FILE_DIR = CMakeFiles\find_tf_2.dir
-  TARGET_COMPILE_PDB = CMakeFiles\find_tf_2.dir\
-  TARGET_PDB = find_tf_2.pdb
-  TARGET_SUPPORT_DIR = CMakeFiles\find_tf_2.dir
-
-
-# =============================================================================
-# Link build statements for EXECUTABLE target find_tf_2
-
-
-#############################################
-# Link the executable find_tf_2.exe
-
-build find_tf_2.exe: CXX_EXECUTABLE_LINKER__find_tf_2_Release CMakeFiles/find_tf_2.dir/find_tf_2.cpp.obj | p4_cpg_solver/c/out/cpg.lib C$:/Users/32796/AppData/Local/Programs/Python/Python311/libs/python311.lib C$:/Users/32796/AppData/Local/Programs/Python/Python311/libs/python311.lib || p4_cpg_solver/c/out/cpg.lib
-  CONFIG = Release
-  FLAGS = -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt
-  LINK_FLAGS = -Xlinker /subsystem:console -fuse-ld=lld-link
-  LINK_LIBRARIES = p4_cpg_solver/c/out/cpg.lib  C:/Users/32796/AppData/Local/Programs/Python/Python311/libs/python311.lib  C:/Users/32796/AppData/Local/Programs/Python/Python311/libs/python311.lib  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -loldnames
-  OBJECT_DIR = CMakeFiles\find_tf_2.dir
-  POST_BUILD = cd .
-  PRE_LINK = cd .
-  TARGET_COMPILE_PDB = CMakeFiles\find_tf_2.dir\
-  TARGET_FILE = find_tf_2.exe
-  TARGET_IMPLIB = find_tf_2.lib
-  TARGET_PDB = find_tf_2.pdb
-  TARGET_SUPPORT_DIR = CMakeFiles\find_tf_2.dir
 
 # =============================================================================
 # Object build statements for EXECUTABLE target kos_pingpong
@@ -1569,6 +1590,8 @@ build p4_cpg_solver/c/solver_code/install/strip: phony p4_cpg_solver/c/solver_co
 # =============================================================================
 # Target aliases.
 
+build GFOLD_demo: phony GFOLD_demo.exe
+
 build cpg: phony p4_cpg_solver/c/out/cpg.lib
 
 build cpg.lib: phony p4_cpg_solver/c/out/cpg.lib
@@ -1583,8 +1606,6 @@ build ecos.dll: phony p4_cpg_solver/c/out/ecos.dll
 
 build find_tf: phony find_tf.exe
 
-build find_tf_2: phony find_tf_2.exe
-
 build kos_pingpong: phony kos_pingpong.exe
 
 build test_solver: phony test_solver.exe
@@ -1597,7 +1618,7 @@ build test_solver: phony test_solver.exe
 #############################################
 # Folder: C:/Users/32796/Desktop/GFOLD/build
 
-build all: phony test_solver.exe find_tf.exe find_tf_2.exe kos_pingpong.exe p4_cpg_solver/c/all
+build all: phony test_solver.exe GFOLD_demo.exe find_tf.exe kos_pingpong.exe p4_cpg_solver/c/all
 
 # =============================================================================
 

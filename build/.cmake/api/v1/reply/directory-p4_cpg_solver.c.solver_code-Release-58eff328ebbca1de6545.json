@@ -56,7 +56,7 @@
 				"p4_cpg_solver/c/out/ecos.lib"
 			],
 			"targetId" : "ecos::@7c1351a833b8dbbda648",
-			"targetIndex" : 2,
+			"targetIndex" : 3,
 			"targetIsImportLibrary" : true,
 			"type" : "target"
 		},
@@ -69,7 +69,7 @@
 				"p4_cpg_solver/c/out/ecos.dll"
 			],
 			"targetId" : "ecos::@7c1351a833b8dbbda648",
-			"targetIndex" : 2,
+			"targetIndex" : 3,
 			"type" : "target"
 		},
 		{
@@ -104,7 +104,7 @@
 			[
 				{
 					"id" : "ecos::@7c1351a833b8dbbda648",
-					"index" : 2
+					"index" : 3
 				}
 			],
 			"paths" : 

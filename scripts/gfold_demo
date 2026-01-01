@@ -31,57 +31,80 @@ SET SEND_FILE TO "send.txt".
 SET RECV_FILE TO "receive.txt".
 SET MODE TO 0.
 
+// On start, clear send.txt if it exists
+IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
+
 // Make sure receive.txt exists for PC side to use later
 IF NOT EXISTS(RECV_FILE) {
   LOG "READY" TO RECV_FILE.
 }.
 
-// ===== Loop: compute ENU + velocity, write to send.txt =====
-UNTIL FALSE {
-  // ===== Current state =====
-  SET CUR_LAT TO SHIP:LATITUDE.
-  SET CUR_LON TO SHIP:LONGITUDE.
-  SET CUR_ALT TO SHIP:ALTITUDE.
+// ===== Helper to compute ENU + velocity/state =====
+FUNCTION CALC_STATE {
+  LOCAL CUR_LAT IS SHIP:LATITUDE.
+  LOCAL CUR_LON IS SHIP:LONGITUDE.
+  LOCAL CUR_ALT IS SHIP:ALTITUDE.
 
-  // Wrap longitude difference to [-180, 180]
-  SET DLON_DEG TO CUR_LON - LON0.
+  LOCAL DLON_DEG IS CUR_LON - LON0.
   IF DLON_DEG > 180 { SET DLON_DEG TO DLON_DEG - 360. }.
   IF DLON_DEG < -180 { SET DLON_DEG TO DLON_DEG + 360. }.
 
-  // Convert to radians
-  SET DLAT TO (CUR_LAT - LAT0) * DEG2RAD.
-  SET DLON TO DLON_DEG * DEG2RAD.
+  LOCAL DLAT IS (CUR_LAT - LAT0) * DEG2RAD.
+  LOCAL DLON IS DLON_DEG * DEG2RAD.
 
-  SET LAT0_RAD TO LAT0 * DEG2RAD.
-  SET RE TO KERBIN_R + ALT0.
+  LOCAL LAT0_RAD IS LAT0 * DEG2RAD.
+  LOCAL RE IS KERBIN_R + ALT0.
 
-  // ===== Local ENU (m) =====
-  SET NORTH_M TO DLAT * RE.
-  SET EAST_M  TO DLON * RE * COS(LAT0_RAD).
-  SET UP_M    TO CUR_ALT - ALT0.
+  LOCAL NORTH_M IS DLAT * RE.
+  LOCAL EAST_M  IS DLON * RE * COS(LAT0_RAD).
+  LOCAL UP_M    IS CUR_ALT - ALT0.
 
-  // ===== Velocity =====
-  SET SPEED TO SHIP:VELOCITY:SURFACE:MAG.
-  SET VH TO SHIP:GROUNDSPEED.
-  SET VU TO SHIP:VERTICALSPEED.
+  LOCAL SPEED IS SHIP:VELOCITY:SURFACE:MAG.
+  LOCAL VH IS SHIP:GROUNDSPEED.
+  LOCAL VU IS SHIP:VERTICALSPEED.
 
-  SET HDG TO SHIP:HEADING * DEG2RAD.
-  SET VN TO VH * COS(HDG).
-  SET VE TO VH * SIN(HDG).
+  LOCAL HDG IS SHIP:HEADING * DEG2RAD.
+  LOCAL VN IS VH * COS(HDG).
+  LOCAL VE IS VH * SIN(HDG).
 
-  // ===== Engine + mass =====
-  SET THRUST_MAX TO SHIP:MAXTHRUST.
-  SET ISP_CUR TO 0.
+  LOCAL THRUST_MAX IS SHIP:MAXTHRUST.
+  LOCAL ISP_CUR IS 0.
   LIST ENGINES IN ENGS.
   IF ENGS:LENGTH > 0 {
-    // Prefer an engine that is currently providing thrust; otherwise take the first.
-    SET ENG TO ENGS[0].
+    LOCAL ENG IS ENGS[0].
     FOR E IN ENGS {
       IF E:AVAILABLETHRUST > 0 { SET ENG TO E. BREAK. }.
     }.
     SET ISP_CUR TO ENG:ISP.
   }.
-  SET MASS_WET TO SHIP:MASS.
+  LOCAL MASS_WET IS SHIP:MASS.
+
+  LOCAL DATA IS LIST().
+  DATA:ADD(EAST_M).
+  DATA:ADD(NORTH_M).
+  DATA:ADD(UP_M).
+  DATA:ADD(VE).
+  DATA:ADD(VN).
+  DATA:ADD(VU).
+  DATA:ADD(SPEED).
+  DATA:ADD(THRUST_MAX).
+  DATA:ADD(ISP_CUR).
+  DATA:ADD(MASS_WET).
+  RETURN DATA.
+}
+
+// ===== Single-shot compute and write =====
+LOCAL STATE IS CALC_STATE().
+SET EAST_M TO STATE[0].
+SET NORTH_M TO STATE[1].
+SET UP_M TO STATE[2].
+SET VE TO STATE[3].
+SET VN TO STATE[4].
+SET VU TO STATE[5].
+SET SPEED TO STATE[6].
+SET THRUST_MAX TO STATE[7].
+SET ISP_CUR TO STATE[8].
+SET MASS_WET TO STATE[9].
 
   // ===== Pack and write to send.txt =====
   // Format (units):
@@ -104,11 +127,7 @@ UNTIL FALSE {
                  ROUND(THETA_DEG,1) + "," +
                  ROUND(YGS_DEG,1).
 
-  // Overwrite send.txt each tick (delete then write to avoid stale data)
-  IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
-  LOG OUT_LINE TO SEND_FILE.
+// Append to send.txt (no delete needed; reader should use last line)
+LOG OUT_LINE TO SEND_FILE.
 
-  PRINT "SEND: " + OUT_LINE.
-
-  WAIT 0.05.
-}
+PRINT "SEND: " + OUT_LINE.

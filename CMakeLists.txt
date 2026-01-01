@@ -14,6 +14,7 @@ find_package(matplotlibcpp17 REQUIRED)
 add_subdirectory(./p4_cpg_solver/c/)
 
 add_executable(test_solver main.cpp GFOLD_solver.cpp)
+add_executable(GFOLD_demo GFOLD_demo.cpp GFOLD_solver.cpp find_tf_2.cpp)
 
 target_include_directories(test_solver PUBLIC 
         ${cpg_include}  
@@ -25,6 +26,13 @@ target_link_libraries(test_solver
     pybind11::embed
     matplotlibcpp17::matplotlibcpp17
 )
+
+target_include_directories(GFOLD_demo PUBLIC 
+        ${cpg_include}  
+        ${Python3_INCLUDE_DIRS})
+
+target_link_libraries(GFOLD_demo 
+    cpg)
 
 
 add_executable(find_tf find_tf.cpp)
@@ -39,17 +47,5 @@ target_link_libraries(find_tf
     pybind11::embed
     matplotlibcpp17::matplotlibcpp17
 )
-
-add_executable(find_tf_2 find_tf_2.cpp)
-
-target_include_directories(find_tf_2 PUBLIC 
-        ${cpg_include}  
-        ${Python3_INCLUDE_DIRS})
-
-target_link_libraries(find_tf_2 
-    cpg
-    ${Python3_LIBRARIES} 
-    pybind11::embed
-    matplotlibcpp17::matplotlibcpp17)
 
 add_executable(kos_pingpong kos_pingpong.cpp)

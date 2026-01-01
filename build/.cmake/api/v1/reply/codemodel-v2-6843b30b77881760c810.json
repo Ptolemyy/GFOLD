@@ -154,7 +154,7 @@
 					"source" : ".",
 					"targetIndexes" : 
 					[
-						3,
+						0,
 						4,
 						5,
 						6
@@ -177,14 +177,14 @@
 					"source" : "p4_cpg_solver/c",
 					"targetIndexes" : 
 					[
-						0,
-						1
+						1,
+						2
 					]
 				},
 				{
 					"build" : "p4_cpg_solver/c/solver_code",
 					"hasInstallRule" : true,
-					"jsonFile" : "directory-p4_cpg_solver.c.solver_code-Release-2a959bbb1446e97e5379.json",
+					"jsonFile" : "directory-p4_cpg_solver.c.solver_code-Release-58eff328ebbca1de6545.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.5"
@@ -194,7 +194,7 @@
 					"source" : "p4_cpg_solver/c/solver_code",
 					"targetIndexes" : 
 					[
-						2
+						3
 					]
 				}
 			],
@@ -232,7 +232,7 @@
 					"name" : "gfold",
 					"targetIndexes" : 
 					[
-						3,
+						0,
 						4,
 						5,
 						6
@@ -251,8 +251,8 @@
 					"parentIndex" : 0,
 					"targetIndexes" : 
 					[
-						0,
-						1
+						1,
+						2
 					]
 				},
 				{
@@ -264,12 +264,19 @@
 					"parentIndex" : 1,
 					"targetIndexes" : 
 					[
-						2
+						3
 					]
 				}
 			],
 			"targets" : 
 			[
+				{
+					"directoryIndex" : 0,
+					"id" : "GFOLD_demo::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-GFOLD_demo-Release-7b52bd497fb753fbfe2f.json",
+					"name" : "GFOLD_demo",
+					"projectIndex" : 0
+				},
 				{
 					"directoryIndex" : 1,
 					"id" : "cpg::@06d4a88f15feea2a87d3",
@@ -294,28 +301,21 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "find_tf::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-find_tf-Release-8fa86cc9f2db61e9e747.json",
+					"jsonFile" : "target-find_tf-Release-481869a94d237b449b42.json",
 					"name" : "find_tf",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
-					"id" : "find_tf_2::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-find_tf_2-Release-086e53f85f9f3688625a.json",
-					"name" : "find_tf_2",
-					"projectIndex" : 0
-				},
-				{
-					"directoryIndex" : 0,
 					"id" : "kos_pingpong::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-kos_pingpong-Release-9c21ce1a957b5a38f35a.json",
+					"jsonFile" : "target-kos_pingpong-Release-e57cd7af6d0fe26d7785.json",
 					"name" : "kos_pingpong",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "test_solver::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-test_solver-Release-136964921beabe4b2992.json",
+					"jsonFile" : "target-test_solver-Release-143028b422f6e18e4791.json",
 					"name" : "test_solver",
 					"projectIndex" : 0
 				}
