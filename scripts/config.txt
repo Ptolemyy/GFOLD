@@ -1,0 +1,9 @@
+// Override defaults by editing these lines as needed
+SET LAT0 TO -0.0972.
+SET LON0 TO -74.5577.
+SET ALT0 TO 0.
+
+SET THROT1 TO 0.2.
+SET THROT2 TO 0.8.
+SET THETA_DEG TO 45.
+SET YGS_DEG TO 30.

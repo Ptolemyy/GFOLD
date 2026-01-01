@@ -1,11 +1,30 @@
-// ===== Parameters =====
+// ===== Defaults (can be overridden by config.txt via RUNPATH) =====
 SET KERBIN_R TO 600000.
 SET LAT0 TO -0.0972.
 SET LON0 TO -74.5577.
-// Use terrain height at target lat/lon to avoid sea-level bias
-SET ALT0 TO LATLNG(LAT0, LON0):TERRAINHEIGHT.
+SET ALT0 TO 0.
+
+SET THROT1 TO 0.2.        // min throttle fraction
+SET THROT2 TO 0.8.        // max throttle fraction
+SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
+SET YGS_DEG TO 30.        // glide slope angle (deg)
 
 SET DEG2RAD TO CONSTANT:PI / 180.
+
+// ===== Optional config override =====
+// Provide a config.txt in the same directory with lines like:
+//   SET LAT0 TO -0.0972.
+//   SET LON0 TO -74.5577.
+//   SET ALT0 TO 0.
+//   SET THROT1 TO 0.2.
+//   SET THROT2 TO 0.8.
+//   SET THETA_DEG TO 45.
+//   SET YGS_DEG TO 30.
+SET CONFIG_FILE TO "config.txt".
+IF EXISTS(CONFIG_FILE) { RUNPATH(CONFIG_FILE). }.
+
+// Align origin altitude with terrain height at target lat/lon
+SET ALT0 TO LATLNG(LAT0, LON0):TERRAINHEIGHT.
 
 // ===== Comm files =====
 SET SEND_FILE TO "send.txt".
@@ -66,8 +85,9 @@ UNTIL FALSE {
 
   // ===== Pack and write to send.txt =====
   // Format (units):
-  // MODE (enum/int), E(m), N(m), U(m), VE(m/s), VN(m/s), VU(m/s),
-  // SPEED(m/s), THRUST_MAX(kN), ISP(s), MASS_WET(t)
+  // MODE (int), E(m), N(m), U(m), VE(m/s), VN(m/s), VU(m/s),
+  // SPEED(m/s), THRUST_MAX(kN), ISP(s), MASS_WET(t),
+  // THROT1(frac), THROT2(frac), THETA_DEG(deg), YGS_DEG(deg)
   SET OUT_LINE TO MODE + "," +
                  ROUND(EAST_M,1) + "," +
                  ROUND(NORTH_M,1) + "," +
@@ -78,7 +98,11 @@ UNTIL FALSE {
                  ROUND(SPEED,2) + "," +
                  ROUND(THRUST_MAX,1) + "," +
                  ROUND(ISP_CUR,1) + "," +
-                 ROUND(MASS_WET,1).
+                 ROUND(MASS_WET,1) + "," +
+                 ROUND(THROT1,2) + "," +
+                 ROUND(THROT2,2) + "," +
+                 ROUND(THETA_DEG,1) + "," +
+                 ROUND(YGS_DEG,1).
 
   // Overwrite send.txt each tick (delete then write to avoid stale data)
   IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
