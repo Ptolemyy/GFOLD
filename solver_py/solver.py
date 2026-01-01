@@ -58,7 +58,7 @@ def lcvx_solve(problem_type):
     '''boundary conditions'''
     r0 = cp.Parameter(3, name='r0', value=bnd.r0)
     v0 = cp.Parameter(3, name='v0', value=bnd.v0)
-    log_m0 = cp.Parameter(name='m0', value=log_m0_,nonneg=True)
+    log_m0 = cp.Parameter(name='log_m0', value=log_m0_,nonneg=True)
     sin_y_gs = cp.Parameter(name='sin_y_gs', value=sin_y_gs_, nonneg=True)
     cos_theta_deg = cp.Parameter(name='cos_theta_deg', value=cos_theta_deg_, nonneg=True)
     rT = bnd.rT

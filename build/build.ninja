@@ -61,6 +61,18 @@ build CMakeFiles/test_solver.dir/main.cpp.obj: CXX_COMPILER__test_solver_unscann
   TARGET_PDB = test_solver.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\test_solver.dir
 
+build CMakeFiles/test_solver.dir/GFOLD_solver.cpp.obj: CXX_COMPILER__test_solver_unscanned_Release C$:/Users/32796/Desktop/GFOLD/GFOLD_solver.cpp || cmake_object_order_depends_target_test_solver
+  CONFIG = Release
+  DEFINES = -DPy_NO_LINK_LIB
+  DEP_FILE = CMakeFiles\test_solver.dir\GFOLD_solver.cpp.obj.d
+  FLAGS = -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -std=gnu++17
+  INCLUDES = -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -isystem C:/Users/32796/AppData/Local/Programs/Python/Python311/Include -isystem C:/libs/pybind11/include -isystem C:/libs/matplotlibcpp17/include
+  OBJECT_DIR = CMakeFiles\test_solver.dir
+  OBJECT_FILE_DIR = CMakeFiles\test_solver.dir
+  TARGET_COMPILE_PDB = CMakeFiles\test_solver.dir\
+  TARGET_PDB = test_solver.pdb
+  TARGET_SUPPORT_DIR = CMakeFiles\test_solver.dir
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target test_solver
@@ -69,7 +81,7 @@ build CMakeFiles/test_solver.dir/main.cpp.obj: CXX_COMPILER__test_solver_unscann
 #############################################
 # Link the executable test_solver.exe
 
-build test_solver.exe: CXX_EXECUTABLE_LINKER__test_solver_Release CMakeFiles/test_solver.dir/main.cpp.obj | p4_cpg_solver/c/out/cpg.lib C$:/Users/32796/AppData/Local/Programs/Python/Python311/libs/python311.lib C$:/Users/32796/AppData/Local/Programs/Python/Python311/libs/python311.lib || p4_cpg_solver/c/out/cpg.lib
+build test_solver.exe: CXX_EXECUTABLE_LINKER__test_solver_Release CMakeFiles/test_solver.dir/main.cpp.obj CMakeFiles/test_solver.dir/GFOLD_solver.cpp.obj | p4_cpg_solver/c/out/cpg.lib C$:/Users/32796/AppData/Local/Programs/Python/Python311/libs/python311.lib C$:/Users/32796/AppData/Local/Programs/Python/Python311/libs/python311.lib || p4_cpg_solver/c/out/cpg.lib
   CONFIG = Release
   FLAGS = -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt
   LINK_FLAGS = -Xlinker /subsystem:console -fuse-ld=lld-link
