@@ -53,3 +53,7 @@ target_link_libraries(find_tf_2
     matplotlibcpp17::matplotlibcpp17)
 
 add_executable(kos_pingpong kos_pingpong.cpp)
+
+target_include_directories(GFOLD_solver PUBLIC 
+        ${cpg_include}  
+        ${Python3_INCLUDE_DIRS})

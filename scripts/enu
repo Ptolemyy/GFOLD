@@ -49,8 +49,24 @@ UNTIL FALSE {
   SET VN TO VH * COS(HDG).
   SET VE TO VH * SIN(HDG).
 
+  // ===== Engine + mass =====
+  SET THRUST_MAX TO SHIP:MAXTHRUST.
+  SET ISP_CUR TO 0.
+  LIST ENGINES IN ENGS.
+  IF ENGS:LENGTH > 0 {
+    // Prefer an engine that is currently providing thrust; otherwise take the first.
+    SET ENG TO ENGS[0].
+    FOR E IN ENGS {
+      IF E:AVAILABLETHRUST > 0 { SET ENG TO E. BREAK. }.
+    }.
+    SET ISP_CUR TO ENG:ISP.
+  }.
+  SET MASS_WET TO SHIP:MASS.
+
   // ===== Pack and write to send.txt =====
-  // Format: MODE,E,N,U,VE,VN,VU,SPEED
+  // Format (units):
+  // MODE (enum/int), E(m), N(m), U(m), VE(m/s), VN(m/s), VU(m/s),
+  // SPEED(m/s), THRUST_MAX(kN), ISP(s), MASS_WET(t)
   SET OUT_LINE TO MODE + "," +
                  ROUND(EAST_M,1) + "," +
                  ROUND(NORTH_M,1) + "," +
@@ -58,10 +74,13 @@ UNTIL FALSE {
                  ROUND(VE,2) + "," +
                  ROUND(VN,2) + "," +
                  ROUND(VU,2) + "," +
-                 ROUND(SPEED,2).
+                 ROUND(SPEED,2) + "," +
+                 ROUND(THRUST_MAX,1) + "," +
+                 ROUND(ISP_CUR,1) + "," +
+                 ROUND(MASS_WET,1).
 
   // Overwrite send.txt each tick (delete then write to avoid stale data)
-  IF EXISTS(SEND_FILE) { DELETE SEND_FILE. }.
+  IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
   LOG OUT_LINE TO SEND_FILE.
 
   PRINT "SEND: " + OUT_LINE.
