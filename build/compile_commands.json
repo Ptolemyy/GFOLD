@@ -1,0 +1,542 @@
+[
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DPy_NO_LINK_LIB -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -isystem C:/Users/32796/AppData/Local/Programs/Python/Python311/Include -isystem C:/libs/pybind11/include -isystem C:/libs/matplotlibcpp17/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -std=gnu++17 -o CMakeFiles\\test_solver.dir\\main.cpp.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\main.cpp",
+  "file": "C:/Users/32796/Desktop/GFOLD/main.cpp",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/test_solver.dir/main.cpp.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DPy_NO_LINK_LIB -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -isystem C:/Users/32796/AppData/Local/Programs/Python/Python311/Include -isystem C:/libs/pybind11/include -isystem C:/libs/matplotlibcpp17/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -std=gnu++17 -o CMakeFiles\\find_tf.dir\\find_tf.cpp.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\find_tf.cpp",
+  "file": "C:/Users/32796/Desktop/GFOLD/find_tf.cpp",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/find_tf.dir/find_tf.cpp.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DPy_NO_LINK_LIB -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -isystem C:/Users/32796/AppData/Local/Programs/Python/Python311/Include -isystem C:/libs/pybind11/include -isystem C:/libs/matplotlibcpp17/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -std=gnu++17 -o CMakeFiles\\find_tf_2.dir\\find_tf_2.cpp.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\find_tf_2.cpp",
+  "file": "C:/Users/32796/Desktop/GFOLD/find_tf_2.cpp",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/find_tf_2.dir/find_tf_2.cpp.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -std=gnu++17 -o CMakeFiles\\kos_pingpong.dir\\kos_pingpong.cpp.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\kos_pingpong.cpp",
+  "file": "C:/Users/32796/Desktop/GFOLD/kos_pingpong.cpp",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/kos_pingpong.dir/kos_pingpong.cpp.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\src\\cpg_workspace.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\src\\cpg_workspace.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/src/cpg_workspace.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/src/cpg_workspace.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\src\\cpg_solve.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\src\\cpg_solve.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/src/cpg_solve.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/src/cpg_solve.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\ecos_bb\\ecos_bb.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\ecos_bb\\ecos_bb.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/ecos_bb/ecos_bb.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/ecos_bb/ecos_bb.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\ecos_bb\\ecos_bb_preproc.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\ecos_bb\\ecos_bb_preproc.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/ecos_bb/ecos_bb_preproc.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/ecos_bb/ecos_bb_preproc.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_1.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_1.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_1.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_1.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_2.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_2.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_2.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_2.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_aat.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_aat.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_aat.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_aat.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_control.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_control.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_control.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_control.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_defaults.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_defaults.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_defaults.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_defaults.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_dump.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_dump.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_dump.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_dump.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_global.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_global.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_global.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_global.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_info.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_info.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_info.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_info.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_order.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_order.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_order.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_order.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_post_tree.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_post_tree.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_post_tree.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_post_tree.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_postorder.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_postorder.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_postorder.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_postorder.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_preprocess.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_preprocess.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_preprocess.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_preprocess.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\amd\\src\\amd_valid.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_valid.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_valid.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/amd/src/amd_valid.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\external\\ldl\\src\\ldl.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\ldl\\src\\ldl.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/src/ldl.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/external/ldl/src/ldl.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\src\\cone.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\cone.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/cone.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/src/cone.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\src\\ctrlc.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\ctrlc.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/ctrlc.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/src/ctrlc.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\src\\ecos.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\ecos.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/ecos.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/src/ecos.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\src\\equil.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\equil.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/equil.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/src/equil.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\src\\expcone.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\expcone.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/expcone.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/src/expcone.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\src\\kkt.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\kkt.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/kkt.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/src/kkt.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\src\\preproc.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\preproc.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/preproc.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/src/preproc.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\src\\spla.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\spla.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/spla.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/src/spla.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\src\\splamm.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\splamm.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/splamm.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/src/splamm.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\src\\timer.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\timer.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/timer.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/src/timer.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\solver_code\\src\\wright_omega.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\wright_omega.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/wright_omega.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/solver_code/src/wright_omega.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg_example.dir\\src\\cpg_example.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\src\\cpg_example.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/src/cpg_example.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg_example.dir/src/cpg_example.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\src\\cpg_workspace.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\src\\cpg_workspace.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/src/cpg_workspace.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/src/cpg_workspace.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\src\\cpg_solve.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\src\\cpg_solve.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/src/cpg_solve.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/src/cpg_solve.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\ecos_bb\\ecos_bb.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\ecos_bb\\ecos_bb.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/ecos_bb/ecos_bb.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/ecos_bb/ecos_bb.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\ecos_bb\\ecos_bb_preproc.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\ecos_bb\\ecos_bb_preproc.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/ecos_bb/ecos_bb_preproc.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/ecos_bb/ecos_bb_preproc.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_1.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_1.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_1.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_1.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_2.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_2.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_2.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_2.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_aat.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_aat.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_aat.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_aat.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_control.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_control.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_control.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_control.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_defaults.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_defaults.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_defaults.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_defaults.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_dump.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_dump.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_dump.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_dump.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_global.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_global.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_global.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_global.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_info.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_info.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_info.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_info.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_order.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_order.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_order.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_order.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_post_tree.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_post_tree.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_post_tree.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_post_tree.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_postorder.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_postorder.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_postorder.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_postorder.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_preprocess.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_preprocess.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_preprocess.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_preprocess.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\amd\\src\\amd_valid.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_valid.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_valid.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/amd/src/amd_valid.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\external\\ldl\\src\\ldl.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\ldl\\src\\ldl.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/src/ldl.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/external/ldl/src/ldl.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\src\\cone.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\cone.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/cone.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/src/cone.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\src\\ctrlc.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\ctrlc.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/ctrlc.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/src/ctrlc.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\src\\ecos.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\ecos.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/ecos.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/src/ecos.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\src\\equil.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\equil.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/equil.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/src/equil.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\src\\expcone.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\expcone.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/expcone.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/src/expcone.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\src\\kkt.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\kkt.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/kkt.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/src/kkt.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\src\\preproc.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\preproc.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/preproc.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/src/preproc.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\src\\spla.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\spla.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/spla.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/src/spla.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\src\\splamm.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\splamm.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/splamm.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/src/splamm.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\src\\timer.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\timer.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/timer.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/src/timer.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o p4_cpg_solver\\c\\CMakeFiles\\cpg.dir\\solver_code\\src\\wright_omega.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\wright_omega.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/wright_omega.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/cpg.dir/solver_code/src/wright_omega.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_1.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_1.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_1.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_1.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_2.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_2.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_2.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_2.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_aat.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_aat.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_aat.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_aat.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_control.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_control.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_control.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_control.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_defaults.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_defaults.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_defaults.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_defaults.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_dump.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_dump.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_dump.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_dump.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_global.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_global.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_global.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_global.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_info.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_info.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_info.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_info.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_order.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_order.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_order.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_order.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_post_tree.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_post_tree.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_post_tree.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_post_tree.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_postorder.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_postorder.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_postorder.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_postorder.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_preprocess.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_preprocess.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_preprocess.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_preprocess.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\amd\\src\\amd_valid.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\amd\\src\\amd_valid.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/src/amd_valid.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/amd/src/amd_valid.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\external\\ldl\\src\\ldl.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\external\\ldl\\src\\ldl.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/src/ldl.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/external/ldl/src/ldl.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\src\\cone.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\cone.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/cone.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/src/cone.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\src\\ctrlc.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\ctrlc.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/ctrlc.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/src/ctrlc.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\src\\ecos.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\ecos.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/ecos.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/src/ecos.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\src\\equil.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\equil.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/equil.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/src/equil.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\src\\expcone.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\expcone.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/expcone.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/src/expcone.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\src\\kkt.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\kkt.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/kkt.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/src/kkt.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\src\\preproc.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\preproc.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/preproc.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/src/preproc.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\src\\spla.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\spla.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/spla.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/src/spla.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\src\\splamm.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\splamm.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/splamm.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/src/splamm.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\src\\timer.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\timer.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/timer.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/src/timer.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\src\\wright_omega.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\src\\wright_omega.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/src/wright_omega.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/src/wright_omega.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\ecos_bb\\ecos_bb.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\ecos_bb\\ecos_bb.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/ecos_bb/ecos_bb.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/ecos_bb/ecos_bb.c.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCTRLC=1 -DDLONG -DLDL_LONG -Decos_EXPORTS -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -O3 -o p4_cpg_solver\\c\\solver_code\\CMakeFiles\\ecos.dir\\ecos_bb\\ecos_bb_preproc.c.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\p4_cpg_solver\\c\\solver_code\\ecos_bb\\ecos_bb_preproc.c",
+  "file": "C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/ecos_bb/ecos_bb_preproc.c",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code/CMakeFiles/ecos.dir/ecos_bb/ecos_bb_preproc.c.obj"
+}
+]

@@ -1,0 +1,132 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"p4_cpg_solver/c/solver_code/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 103,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 110,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 125,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 131,
+				"parent" : 0
+			}
+		]
+	},
+	"codemodelVersion" : 
+	{
+		"major" : 2,
+		"minor" : 9
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"p4_cpg_solver/c/out/ecos.lib"
+			],
+			"targetId" : "ecos::@7c1351a833b8dbbda648",
+			"targetIndex" : 2,
+			"targetIsImportLibrary" : true,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"p4_cpg_solver/c/out/ecos.dll"
+			],
+			"targetId" : "ecos::@7c1351a833b8dbbda648",
+			"targetIndex" : 2,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "include/ecos",
+			"paths" : 
+			[
+				"p4_cpg_solver/c/solver_code/external/SuiteSparse_config/SuiteSparse_config.h",
+				"p4_cpg_solver/c/solver_code/include/cone.h",
+				"p4_cpg_solver/c/solver_code/include/ctrlc.h",
+				"p4_cpg_solver/c/solver_code/include/data.h",
+				"p4_cpg_solver/c/solver_code/include/ecos.h",
+				"p4_cpg_solver/c/solver_code/include/ecos_bb.h",
+				"p4_cpg_solver/c/solver_code/include/equil.h",
+				"p4_cpg_solver/c/solver_code/include/expcone.h",
+				"p4_cpg_solver/c/solver_code/include/glblopts.h",
+				"p4_cpg_solver/c/solver_code/include/kkt.h",
+				"p4_cpg_solver/c/solver_code/include/spla.h",
+				"p4_cpg_solver/c/solver_code/include/splamm.h",
+				"p4_cpg_solver/c/solver_code/include/timer.h",
+				"p4_cpg_solver/c/solver_code/include/wright_omega.h"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/ecos",
+			"exportName" : "ecos",
+			"exportTargets" : 
+			[
+				{
+					"id" : "ecos::@7c1351a833b8dbbda648",
+					"index" : 2
+				}
+			],
+			"paths" : 
+			[
+				"p4_cpg_solver/c/solver_code/CMakeFiles/Export/1486f10f4b53bd9f1a0cd8f44f37b237/ecos-targets.cmake"
+			],
+			"type" : "export"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/ecos",
+			"paths" : 
+			[
+				"build/p4_cpg_solver/c/solver_code/ecos-config.cmake"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "p4_cpg_solver/c/solver_code",
+		"source" : "p4_cpg_solver/c/solver_code"
+	}
+}

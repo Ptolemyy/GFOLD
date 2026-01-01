@@ -1,0 +1,10 @@
+^C:\USERS\32796\DESKTOP\GFOLD\P4_CPG_SOLVER\C\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/32796/Desktop/GFOLD -BC:/Users/32796/Desktop/GFOLD/build --check-stamp-file C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
