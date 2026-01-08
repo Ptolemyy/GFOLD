@@ -10,6 +10,10 @@
 #include <thread>
 #include <vector>
 
+extern "C" {
+#include "cpg_workspace.h"
+}
+
 namespace fs = std::filesystem;
 using namespace std::chrono_literals;
 
@@ -34,9 +38,33 @@ static std::vector<std::string> split_csv(const std::string& line) {
     return out;
 }
 
+// Read the newest line from send.txt and remove it from the file.
+static std::string consume_last_line(const fs::path& p) {
+    std::ifstream in(p);
+    if (!in) return "";
+    std::vector<std::string> lines;
+    std::string l;
+    while (std::getline(in, l)) {
+        while (!l.empty() && (l.back() == '\n' || l.back() == '\r')) l.pop_back();
+        if (!l.empty()) lines.push_back(l);
+    }
+    if (lines.empty()) return "";
+    std::string last = lines.back();
+    lines.pop_back();
+
+    std::ofstream out(p, std::ios::trunc);
+    for (size_t i = 0; i < lines.size(); ++i) {
+        out << lines[i];
+        if (i + 1 < lines.size()) out << "\n";
+    }
+    return last;
+}
+
 static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDConfig& cfg) {
     // Expect at least: MODE,E,N,U,VE,VN,VU,SPEED,THRUST_MAX,ISP,MASS_WET
     if (tok.size() < 11) return false;
+    // Optional extra fields:
+    // [11]=THROT1, [12]=THROT2, [13]=THETA_DEG, [14]=YGS_DEG, [15]=RECOMPUTE_TIME
     try {
         // Solver assumes x-axis is altitude. Map ENU accordingly:
         cfg.r0[0] = std::stod(tok[3]); // U -> x (altitude)
@@ -55,6 +83,12 @@ static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDC
         if (tok.size() > 12) cfg.throttle_max = std::stod(tok[12]);
         if (tok.size() > 13) cfg.max_angle_deg = std::stod(tok[13]);
         if (tok.size() > 14) cfg.glide_slope_deg = std::stod(tok[14]);
+        // We parse recompute_time if provided (index 15) but do not use it yet.
+        if (tok.size() > 15) {
+            // Placeholder: parsed but unused for now
+            double recompute_time = std::stod(tok[15]);
+            (void)recompute_time;
+        }
     } catch (...) {
         return false;
     }
@@ -65,6 +99,8 @@ int main() {
     // Adjust this path to your KSP Scripts folder if needed.
     const fs::path send_path =
         R"(C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\Ships\Script\send.txt)";
+    const fs::path recv_path =
+        R"(C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\Ships\Script\receive.txt)";
 
     // Clear old content to avoid stale reads
     {
@@ -73,13 +109,15 @@ int main() {
         std::ofstream clear(send_path, std::ios::trunc);
     }
 
-    std::string last_line;
+    bool has_best_tf = false;
+    double best_tf = 0.0;
+    bool mode1_handled = false;
+
     while (true) {
         std::this_thread::sleep_for(20ms);
 
-        std::string line = read_last_line(send_path);
-        if (line.empty() || line == last_line) continue;
-        last_line = line;
+        std::string line = consume_last_line(send_path);
+        if (line.empty()) continue;
 
         auto tok = split_csv(line);
         if (tok.empty()) continue;
@@ -87,28 +125,75 @@ int main() {
         int mode = 0;
         try { mode = std::stoi(tok[0]); } catch (...) { continue; }
 
-        if (mode != 0) continue; // only handle mode 0 for tf search
+        if (mode == 0) {
+            GFOLDConfig cfg; // start with defaults
+            cfg.tf = 60.0;   // placeholder; actual tf is searched over
+            cfg.g0 = 9.81;
+            if (!populate_cfg_from_tokens(tok, cfg)) {
+                std::cerr << "Parse error on line: " << line << "\n";
+                continue;
+            }
 
-        GFOLDConfig cfg; // start with defaults
-        cfg.tf = 60.0;   // placeholder; actual tf is searched over
-        cfg.g0 = 9.81;
-        if (!populate_cfg_from_tokens(tok, cfg)) {
-            std::cerr << "Parse error on line: " << line << "\n";
-            continue;
+            const double L = 10.0, R = 90.0;
+            SearchResult res = find_best_tf(cfg, L, R, 20);
+
+            if (!res.feasible) {
+                std::cout << "[mode0] infeasible in [" << L << ", " << R << "]\n";
+                continue;
+            }
+
+            has_best_tf = true;
+            best_tf = res.best_tf;
+            mode1_handled = false;
+
+            std::cout << "[mode0] best_tf=" << res.best_tf
+                      << " best_m=" << res.best_m
+                      << " solves=" << res.solve_calls
+                      << " time=" << res.elapsed_sec << "s\n";
+
+            // Request kOS to send fresh state as mode1 (write a kOS snippet)
+            {
+                std::ofstream out(recv_path, std::ios::trunc);
+                out << "SET COMPUTE_FINISH TO 1.\n";
+            }
+        } else if (mode == 1 && has_best_tf && !mode1_handled) {
+            // Populate cfg from current state, reuse best_tf
+            GFOLDConfig cfg;
+            cfg.tf = best_tf;
+            cfg.g0 = 9.81;
+            if (!populate_cfg_from_tokens(tok, cfg)) {
+                std::cerr << "Parse error on mode1 line: " << line << "\n";
+                continue;
+            }
+
+            GFOLDSolver solver(cfg);
+            bool ok = solver.solve();
+            if (!ok) {
+                std::cerr << "[mode1] solve failed\n";
+                continue;
+            }
+
+            const int steps = cfg.steps;
+            const double dt = cfg.tf / static_cast<double>(steps);
+            double* ux = CPG_Result.prim->u;
+            double* uy = CPG_Result.prim->u + steps;
+            double* uz = CPG_Result.prim->u + 2 * steps;
+
+            std::ostringstream oss;
+            oss << "SET U_PROFILE TO LIST(";
+            for (int i = 0; i < steps; ++i) {
+                double t = i * dt;
+                oss << "LIST(" << t << "," << ux[i] << "," << uy[i] << "," << uz[i] << ")";
+                if (i + 1 < steps) oss << ", ";
+            }
+            oss << ").\n";
+            oss << "SET COMPUTE_FINISH TO 1.\n";
+
+            std::ofstream out(recv_path, std::ios::trunc);
+            out << oss.str();
+            mode1_handled = true;
+            std::cout << "[mode1] solution written to receive.txt\n";
         }
-
-        const double L = 10.0, R = 90.0;
-        SearchResult res = find_best_tf(cfg, L, R, 20);
-
-        if (!res.feasible) {
-            std::cout << "[mode0] infeasible in [" << L << ", " << R << "]\n";
-            continue;
-        }
-
-        std::cout << "[mode0] best_tf=" << res.best_tf
-                  << " best_m=" << res.best_m
-                  << " solves=" << res.solve_calls
-                  << " time=" << res.elapsed_sec << "s\n";
     }
 
     return 0;

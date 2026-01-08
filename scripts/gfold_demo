@@ -8,6 +8,7 @@ SET THROT1 TO 0.2.        // min throttle fraction
 SET THROT2 TO 0.8.        // max throttle fraction
 SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
+SET RECOMPUTE_TIME TO 0.5. // seconds (for future use)
 
 SET DEG2RAD TO CONSTANT:PI / 180.
 
@@ -27,16 +28,21 @@ IF EXISTS(CONFIG_FILE) { RUNPATH(CONFIG_FILE). }.
 SET ALT0 TO LATLNG(LAT0, LON0):TERRAINHEIGHT.
 
 // ===== Comm files =====
-SET SEND_FILE TO "send.txt".
-SET RECV_FILE TO "receive.txt".
+// Explicitly use Archive volume paths to match PC-side writes
+SET SEND_FILE TO "0:/send.txt".
+SET RECV_FILE TO "0:/receive.txt".
 SET MODE TO 0.
+SET COMPUTE_FINISH TO 0.
+SET IS_RECOMPUTE TO 1.
 
 // On start, clear send.txt if it exists
 IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
+// Also clear stale receive.txt to avoid running old/invalid commands
+IF EXISTS(RECV_FILE) { DELETEPATH(RECV_FILE). }.
 
 // Make sure receive.txt exists for PC side to use later
 IF NOT EXISTS(RECV_FILE) {
-  LOG "READY" TO RECV_FILE.
+  LOG "SET COMPUTE_FINISH TO 0." TO RECV_FILE.
 }.
 
 // ===== Helper to compute ENU + velocity/state =====
@@ -93,7 +99,7 @@ FUNCTION CALC_STATE {
   RETURN DATA.
 }
 
-// ===== Single-shot compute and write =====
+// ===== Single-shot mode0 compute and write =====
 LOCAL STATE IS CALC_STATE().
 SET EAST_M TO STATE[0].
 SET NORTH_M TO STATE[1].
@@ -106,28 +112,69 @@ SET THRUST_MAX TO STATE[7].
 SET ISP_CUR TO STATE[8].
 SET MASS_WET TO STATE[9].
 
-  // ===== Pack and write to send.txt =====
-  // Format (units):
-  // MODE (int), E(m), N(m), U(m), VE(m/s), VN(m/s), VU(m/s),
-  // SPEED(m/s), THRUST_MAX(kN), ISP(s), MASS_WET(t),
-  // THROT1(frac), THROT2(frac), THETA_DEG(deg), YGS_DEG(deg)
-  SET OUT_LINE TO MODE + "," +
-                 ROUND(EAST_M,1) + "," +
-                 ROUND(NORTH_M,1) + "," +
-                 ROUND(UP_M,1) + "," +
-                 ROUND(VE,2) + "," +
-                 ROUND(VN,2) + "," +
-                 ROUND(VU,2) + "," +
-                 ROUND(SPEED,2) + "," +
-                 ROUND(THRUST_MAX,1) + "," +
-                 ROUND(ISP_CUR,1) + "," +
-                 ROUND(MASS_WET,1) + "," +
-                 ROUND(THROT1,2) + "," +
-                 ROUND(THROT2,2) + "," +
-                 ROUND(THETA_DEG,1) + "," +
-                 ROUND(YGS_DEG,1).
+// Pack and write mode0
+SET OUT_LINE TO MODE + "," +
+               ROUND(EAST_M,1) + "," +
+               ROUND(NORTH_M,1) + "," +
+               ROUND(UP_M,1) + "," +
+               ROUND(VE,2) + "," +
+               ROUND(VN,2) + "," +
+               ROUND(VU,2) + "," +
+               ROUND(SPEED,2) + "," +
+               ROUND(THRUST_MAX,1) + "," +
+               ROUND(ISP_CUR,1) + "," +
+               ROUND(MASS_WET,1) + "," +
+               ROUND(THROT1,2) + "," +
+               ROUND(THROT2,2) + "," +
+               ROUND(THETA_DEG,1) + "," +
+               ROUND(YGS_DEG,1).
 
-// Append to send.txt (no delete needed; reader should use last line)
 LOG OUT_LINE TO SEND_FILE.
+PRINT "SEND MODE0: " + OUT_LINE.
 
-PRINT "SEND: " + OUT_LINE.
+// ===== Wait for COMPUTE_FINISH requests and respond with mode1 =====
+UNTIL FALSE {
+  IF EXISTS(RECV_FILE) {
+    SET COMPUTE_FINISH TO 0.
+    RUNPATH(RECV_FILE).
+    IF COMPUTE_FINISH = 1 {
+      PRINT "COMPUTE_FINISH".
+      DELETEPATH(RECV_FILE).
+
+      SET STATE TO CALC_STATE().
+      SET EAST_M TO STATE[0].
+      SET NORTH_M TO STATE[1].
+      SET UP_M TO STATE[2].
+      SET VE TO STATE[3].
+      SET VN TO STATE[4].
+      SET VU TO STATE[5].
+      SET SPEED TO STATE[6].
+      SET THRUST_MAX TO STATE[7].
+      SET ISP_CUR TO STATE[8].
+      SET MASS_WET TO STATE[9].
+      IF IS_RECOMPUTE = 1 {
+        SET MODE TO 1.
+        SET OUT_LINE TO MODE + "," +
+                      ROUND(EAST_M,1) + "," +
+                      ROUND(NORTH_M,1) + "," +
+                      ROUND(UP_M,1) + "," +
+                      ROUND(VE,2) + "," +
+                      ROUND(VN,2) + "," +
+                      ROUND(VU,2) + "," +
+                      ROUND(SPEED,2) + "," +
+                      ROUND(THRUST_MAX,1) + "," +
+                      ROUND(ISP_CUR,1) + "," +
+                      ROUND(MASS_WET,1) + "," +
+                      ROUND(THROT1,2) + "," +
+                      ROUND(THROT2,2) + "," +
+                      ROUND(THETA_DEG,1) + "," +
+                      ROUND(YGS_DEG,1).
+                      
+        LOG OUT_LINE TO SEND_FILE.
+        PRINT "SEND MODE1: " + OUT_LINE.
+        SET IS_RECOMPUTE TO 0.
+      }.
+    }.
+  }.
+  WAIT 0.05.
+}
