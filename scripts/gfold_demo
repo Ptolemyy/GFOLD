@@ -34,6 +34,13 @@ SET RECV_FILE TO "0:/receive.txt".
 SET MODE TO 0.
 SET COMPUTE_FINISH TO 0.
 SET IS_RECOMPUTE TO 1.
+SET MODE1_ACTIVE TO 0.
+SET MODE1_INDEX TO 0.
+SET DT_MODE1 TO 0.
+SET NEXT_UPDATE TO 0.
+SET U_LIST TO LIST().
+SET CR TO CHAR(13).
+SET LF TO CHAR(10).
 
 // On start, clear send.txt if it exists
 IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
@@ -41,9 +48,7 @@ IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
 IF EXISTS(RECV_FILE) { DELETEPATH(RECV_FILE). }.
 
 // Make sure receive.txt exists for PC side to use later
-IF NOT EXISTS(RECV_FILE) {
-  LOG "SET COMPUTE_FINISH TO 0." TO RECV_FILE.
-}.
+IF NOT EXISTS(RECV_FILE) { CREATE(RECV_FILE). }.
 
 // ===== Helper to compute ENU + velocity/state =====
 FUNCTION CALC_STATE {
@@ -99,6 +104,29 @@ FUNCTION CALC_STATE {
   RETURN DATA.
 }
 
+// Map ENU thrust vector to heading/pitch and throttle.
+FUNCTION APPLY_THRUST {
+  PARAMETER U_UP, U_NORTH, U_EAST.
+  LOCAL HORIZ IS SQRT(U_NORTH * U_NORTH + U_EAST * U_EAST).
+  LOCAL HDG IS 0.
+  IF HORIZ <> 0 {
+    SET HDG TO ARCTAN2(U_EAST, U_NORTH).
+    IF HDG < 0 { SET HDG TO HDG + 360. }.
+  }.
+  LOCAL PITCH IS ARCTAN2(U_UP, HORIZ).
+
+  LOCK STEERING TO HEADING(HDG, PITCH).
+
+  LOCAL A_MAG IS SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
+  IF A_MAG <= 0 OR SHIP:MAXTHRUST <= 0 {
+    LOCK THROTTLE TO 0.
+  } ELSE {
+    LOCAL THR_CMD IS A_MAG * SHIP:MASS / SHIP:MAXTHRUST.
+    SET THR_CMD TO MIN(THROT2, MAX(THR_CMD, THROT1)).
+    LOCK THROTTLE TO THR_CMD.
+  }.
+}
+
 // ===== Single-shot mode0 compute and write =====
 LOCAL STATE IS CALC_STATE().
 SET EAST_M TO STATE[0].
@@ -129,51 +157,116 @@ SET OUT_LINE TO MODE + "," +
                ROUND(THETA_DEG,1) + "," +
                ROUND(YGS_DEG,1).
 
-LOG OUT_LINE TO SEND_FILE.
+IF NOT EXISTS(SEND_FILE) { CREATE(SEND_FILE). }.
+SET f TO OPEN(SEND_FILE).
+f:CLEAR().
+f:WRITELN(OUT_LINE).
 PRINT "SEND MODE0: " + OUT_LINE.
 
 // ===== Wait for COMPUTE_FINISH requests and respond with mode1 =====
 UNTIL FALSE {
   IF EXISTS(RECV_FILE) {
-    SET COMPUTE_FINISH TO 0.
-    RUNPATH(RECV_FILE).
-    IF COMPUTE_FINISH = 1 {
-      PRINT "COMPUTE_FINISH".
-      DELETEPATH(RECV_FILE).
-
-      SET STATE TO CALC_STATE().
-      SET EAST_M TO STATE[0].
-      SET NORTH_M TO STATE[1].
-      SET UP_M TO STATE[2].
-      SET VE TO STATE[3].
-      SET VN TO STATE[4].
-      SET VU TO STATE[5].
-      SET SPEED TO STATE[6].
-      SET THRUST_MAX TO STATE[7].
-      SET ISP_CUR TO STATE[8].
-      SET MASS_WET TO STATE[9].
-      IF IS_RECOMPUTE = 1 {
-        SET MODE TO 1.
-        SET OUT_LINE TO MODE + "," +
-                      ROUND(EAST_M,1) + "," +
-                      ROUND(NORTH_M,1) + "," +
-                      ROUND(UP_M,1) + "," +
-                      ROUND(VE,2) + "," +
-                      ROUND(VN,2) + "," +
-                      ROUND(VU,2) + "," +
-                      ROUND(SPEED,2) + "," +
-                      ROUND(THRUST_MAX,1) + "," +
-                      ROUND(ISP_CUR,1) + "," +
-                      ROUND(MASS_WET,1) + "," +
-                      ROUND(THROT1,2) + "," +
-                      ROUND(THROT2,2) + "," +
-                      ROUND(THETA_DEG,1) + "," +
-                      ROUND(YGS_DEG,1).
-                      
-        LOG OUT_LINE TO SEND_FILE.
-        PRINT "SEND MODE1: " + OUT_LINE.
-        SET IS_RECOMPUTE TO 0.
+    SET RECV_LINE TO OPEN(RECV_FILE):READALL:STRING.
+    IF RECV_LINE <> "" {
+      SET COMPUTE_FINISH TO 0.
+      SET HAS_FINISH TO 0.
+      SET NEW_DT_MODE1 TO 0.
+      SET NEW_U_LIST TO LIST().
+      SET RECV_LINE TO RECV_LINE:REPLACE(CR, "").
+      SET RECV_LINES TO RECV_LINE:SPLIT(LF).
+      FOR L IN RECV_LINES {
+        IF L <> "" {
+          SET PARTS TO L:SPLIT(",").
+          IF PARTS:LENGTH >= 2 {
+            IF PARTS[0] = "COMPUTE_FINISH" AND PARTS[1]:STARTSWITH("1") {
+              SET HAS_FINISH TO 1.
+            } ELSE IF PARTS[0] = "U" AND PARTS:LENGTH >= 4 {
+              SET U_UP TO PARTS[1]:TONUMBER.
+              SET U_NORTH TO PARTS[2]:TONUMBER.
+              SET U_EAST TO PARTS[3]:TONUMBER.
+              NEW_U_LIST:ADD(LIST(U_UP, U_NORTH, U_EAST)).
+            } ELSE IF PARTS[0] = "DT" {
+              SET NEW_DT_MODE1 TO PARTS[1]:TONUMBER.
+            }.
+          }.
+        }.
       }.
+      IF HAS_FINISH = 1 {
+        SET U_LIST TO NEW_U_LIST.
+        SET DT_MODE1 TO NEW_DT_MODE1.
+
+        SET HAS_U TO 0.
+        IF U_LIST:LENGTH > 0 { SET HAS_U TO 1. }.
+        IF HAS_U = 1 AND DT_MODE1 > 0 {
+          SET COMPUTE_FINISH TO 1.
+        } ELSE IF HAS_U = 0 AND DT_MODE1 <= 0 {
+          SET COMPUTE_FINISH TO 1.
+        }.
+        IF COMPUTE_FINISH = 1 {
+          SET rf TO OPEN(RECV_FILE).
+          rf:CLEAR().
+          PRINT "COMPUTE_FINISH".
+          PRINT U_LIST:LENGTH.
+          IF U_LIST:LENGTH > 0 AND DT_MODE1 > 0 {
+            SET MODE1_ACTIVE TO 1.
+            SET MODE1_INDEX TO 0.
+            SET NEXT_UPDATE TO TIME:SECONDS + DT_MODE1.
+            SET U0 TO U_LIST[0].
+            APPLY_THRUST(U0[0], U0[1], U0[2]).
+          }.
+
+          SET STATE TO CALC_STATE().
+          SET EAST_M TO STATE[0].
+          SET NORTH_M TO STATE[1].
+          SET UP_M TO STATE[2].
+          SET VE TO STATE[3].
+          SET VN TO STATE[4].
+          SET VU TO STATE[5].
+          SET SPEED TO STATE[6].
+          SET THRUST_MAX TO STATE[7].
+          SET ISP_CUR TO STATE[8].
+          SET MASS_WET TO STATE[9].
+          IF IS_RECOMPUTE = 1 {
+            SET MODE TO 1.
+            SET OUT_LINE TO MODE + "," +
+                          ROUND(EAST_M,1) + "," +
+                          ROUND(NORTH_M,1) + "," +
+                          ROUND(UP_M,1) + "," +
+                          ROUND(VE,2) + "," +
+                          ROUND(VN,2) + "," +
+                          ROUND(VU,2) + "," +
+                          ROUND(SPEED,2) + "," +
+                          ROUND(THRUST_MAX,1) + "," +
+                          ROUND(ISP_CUR,1) + "," +
+                          ROUND(MASS_WET,1) + "," +
+                          ROUND(THROT1,2) + "," +
+                          ROUND(THROT2,2) + "," +
+                          ROUND(THETA_DEG,1) + "," +
+                          ROUND(YGS_DEG,1).
+                          
+            IF NOT EXISTS(SEND_FILE) { CREATE(SEND_FILE). }.
+            SET f TO OPEN(SEND_FILE).
+            f:CLEAR().
+            f:WRITELN(OUT_LINE).
+            PRINT "SEND MODE1: " + OUT_LINE.
+            SET IS_RECOMPUTE TO 0.
+          }.
+        }.
+      }.
+    }.
+  }.
+  IF MODE1_ACTIVE = 1 AND TIME:SECONDS >= NEXT_UPDATE {
+    IF U_LIST:LENGTH = 0 OR DT_MODE1 <= 0 {
+      SET MODE1_ACTIVE TO 0.
+      LOCK THROTTLE TO 0.
+    } ELSE {
+      SET MODE1_INDEX TO MODE1_INDEX + 1.
+      IF MODE1_INDEX >= U_LIST:LENGTH {
+        SET MODE1_INDEX TO 0.
+      }.
+      SET U_CUR TO U_LIST[MODE1_INDEX].
+      APPLY_THRUST(U_CUR[0], U_CUR[1], U_CUR[2]).
+      SET NEXT_UPDATE TO NEXT_UPDATE + DT_MODE1.
     }.
   }.
   WAIT 0.05.

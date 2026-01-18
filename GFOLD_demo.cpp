@@ -4,6 +4,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -58,6 +59,21 @@ static std::string consume_last_line(const fs::path& p) {
         if (i + 1 < lines.size()) out << "\n";
     }
     return last;
+}
+
+static bool atomic_write(const fs::path& p, const std::string& content) {
+    fs::path tmp = p;
+    tmp += ".tmp";
+
+    std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
+    if (!out) return false;
+    out << content;
+    out.close();
+
+    std::error_code ec;
+    fs::remove(p, ec);
+    fs::rename(tmp, p, ec);
+    return !ec;
 }
 
 static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDConfig& cfg) {
@@ -151,10 +167,11 @@ int main() {
                       << " solves=" << res.solve_calls
                       << " time=" << res.elapsed_sec << "s\n";
 
-            // Request kOS to send fresh state as mode1 (write a kOS snippet)
+            // Request kOS to send fresh state as mode1 (fixed-format marker)
             {
-                std::ofstream out(recv_path, std::ios::trunc);
-                out << "SET COMPUTE_FINISH TO 1.\n";
+                if (!atomic_write(recv_path, "COMPUTE_FINISH,1\n")) {
+                    std::cerr << "Failed to write receive.txt\n";
+                }
             }
         } else if (mode == 1 && has_best_tf && !mode1_handled) {
             // Populate cfg from current state, reuse best_tf
@@ -180,19 +197,17 @@ int main() {
             double* uz = CPG_Result.prim->u + 2 * steps;
 
             std::ostringstream oss;
-            oss << "SET U_PROFILE TO LIST(";
+            oss << std::setprecision(10) << std::fixed;
+            oss << "COMPUTE_FINISH,1\n";
             for (int i = 0; i < steps; ++i) {
-                double t = i * dt;
-                oss << "LIST(" << t << "," << ux[i] << "," << uy[i] << "," << uz[i] << ")";
-                if (i + 1 < steps) oss << ", ";
+                oss << "U," << ux[i] << "," << uy[i] << "," << uz[i] << "\n";
             }
-            oss << ").\n";
-            oss << "SET COMPUTE_FINISH TO 1.\n";
-
-            std::ofstream out(recv_path, std::ios::trunc);
-            out << oss.str();
+            oss << "DT," << dt << "\n";
+            if (!atomic_write(recv_path, oss.str())) {
+                std::cerr << "Failed to write receive.txt\n";
+            }
             mode1_handled = true;
-            std::cout << "[mode1] solution written to receive.txt\n";
+            std::cout << "[mode1] profile written to receive.txt\n";
         }
     }
 
