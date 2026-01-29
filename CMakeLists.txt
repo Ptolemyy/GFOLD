@@ -4,7 +4,10 @@ project(gfold VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
-set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+if(CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "" FORCE)
+endif()
 
 
 find_package(Python3 COMPONENTS Interpreter Development)
@@ -35,7 +38,7 @@ target_link_libraries(GFOLD_demo
     cpg)
 
 
-add_executable(find_tf find_tf.cpp)
+add_executable(find_tf find_tf.cpp GFOLD_solver.cpp)
 
 target_include_directories(find_tf PUBLIC 
         ${cpg_include}  

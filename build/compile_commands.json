@@ -37,6 +37,12 @@
 },
 {
   "directory": "C:/Users/32796/Desktop/GFOLD/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DPy_NO_LINK_LIB -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/SuiteSparse_config -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/amd/include -IC:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code/external/ldl/include -isystem C:/Users/32796/AppData/Local/Programs/Python/Python311/Include -isystem C:/libs/pybind11/include -isystem C:/libs/matplotlibcpp17/include -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -std=gnu++17 -o CMakeFiles\\find_tf.dir\\GFOLD_solver.cpp.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\GFOLD_solver.cpp",
+  "file": "C:/Users/32796/Desktop/GFOLD/GFOLD_solver.cpp",
+  "output": "C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/find_tf.dir/GFOLD_solver.cpp.obj"
+},
+{
+  "directory": "C:/Users/32796/Desktop/GFOLD/build",
   "command": "C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -O3 -DNDEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -std=gnu++17 -o CMakeFiles\\kos_pingpong.dir\\kos_pingpong.cpp.obj -c C:\\Users\\32796\\Desktop\\GFOLD\\kos_pingpong.cpp",
   "file": "C:/Users/32796/Desktop/GFOLD/kos_pingpong.cpp",
   "output": "C:/Users/32796/Desktop/GFOLD/build/CMakeFiles/kos_pingpong.dir/kos_pingpong.cpp.obj"

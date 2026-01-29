@@ -159,7 +159,7 @@ int main() {
             }
 
             has_best_tf = true;
-            best_tf = res.best_tf;
+            best_tf = res.best_tf + 5.0;
             mode1_handled = false;
 
             std::cout << "[mode0] best_tf=" << res.best_tf
@@ -183,6 +183,20 @@ int main() {
                 continue;
             }
 
+            std::cout << std::fixed << std::setprecision(6);
+            std::cout << "[mode1] cfg tf=" << cfg.tf
+                      << " g0=" << cfg.g0
+                      << " Isp=" << cfg.Isp
+                      << " T_max=" << cfg.T_max
+                      << " throt=[" << cfg.throttle_min << "," << cfg.throttle_max << "]"
+                      << " m0=" << cfg.m0
+                      << " r0=[" << cfg.r0[0] << "," << cfg.r0[1] << "," << cfg.r0[2] << "]"
+                      << " v0=[" << cfg.v0[0] << "," << cfg.v0[1] << "," << cfg.v0[2] << "]"
+                      << " glide=" << cfg.glide_slope_deg
+                      << " theta=" << cfg.max_angle_deg
+                      << " steps=" << cfg.steps
+                      << "\n";
+
             GFOLDSolver solver(cfg);
             bool ok = solver.solve();
             if (!ok) {
@@ -195,6 +209,12 @@ int main() {
             double* ux = CPG_Result.prim->u;
             double* uy = CPG_Result.prim->u + steps;
             double* uz = CPG_Result.prim->u + 2 * steps;
+
+            std::cout << std::fixed << std::setprecision(6);
+            for (int i = 0; i < steps; ++i) {
+                std::cout << "[mode1] U[" << i << "]=" << ux[i] << ","
+                          << uy[i] << "," << uz[i] << "\n";
+            }
 
             std::ostringstream oss;
             oss << std::setprecision(10) << std::fixed;

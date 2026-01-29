@@ -19,19 +19,19 @@ int main()
     // Problem setup (callers can change these before solving)
     GFOLDConfig cfg;
     cfg.steps = 100;
-    cfg.tf = 57.29;
-    cfg.g0 = 3.71;
-    cfg.Isp = 2000.0/3.71;
-    cfg.T_max = 24000.0;
+    cfg.tf = 31.726;
+    cfg.g0 = 9.81;
+    cfg.Isp = 262.9;
+    cfg.T_max = 176400.0;
     cfg.throttle_min = 0.2;
     cfg.throttle_max = 0.8;
-    cfg.m0 = 2000.0;
-    cfg.r0[0] = 2400.0;
-    cfg.r0[1] = 450.0;
-    cfg.r0[2] = -330.0;
-    cfg.v0[0] = -10.0;
-    cfg.v0[1] = -40.0;
-    cfg.v0[2] = 10.0;
+    cfg.m0 = 5400.0;
+    cfg.r0[0] = 1379.700000;
+    cfg.r0[1] = -6.300;
+    cfg.r0[2] = -5.100;
+    cfg.v0[0] = -7.38;
+    cfg.v0[1] = 0.0;
+    cfg.v0[2] = 0.0;
     cfg.glide_slope_deg = 30.0;
     cfg.max_angle_deg = 45.0;
 
