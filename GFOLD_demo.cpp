@@ -2,6 +2,7 @@
 #include "find_tf_2.hpp"
 
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -77,11 +78,11 @@ static bool atomic_write(const fs::path& p, const std::string& content) {
     return !ec;
 }
 
-static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDConfig& cfg) {
+static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDConfig& cfg, double* base_time_out) {
     // Expect at least: MODE,E,N,U,VE,VN,VU,SPEED,THRUST_MAX,ISP,MASS_WET
     if (tok.size() < 11) return false;
     // Optional extra fields:
-    // [11]=THROT1, [12]=THROT2, [13]=THETA_DEG, [14]=YGS_DEG, [15]=RECOMPUTE_TIME
+    // [11]=THROT1, [12]=THROT2, [13]=THETA_DEG, [14]=YGS_DEG, [15]=ELAPSED_SEC
     try {
         // Solver assumes x-axis is altitude. Map ENU accordingly:
         cfg.r0[0] = std::stod(tok[3]); // U -> x (altitude)
@@ -100,11 +101,10 @@ static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDC
         if (tok.size() > 12) cfg.throttle_max = std::stod(tok[12]);
         if (tok.size() > 13) cfg.max_angle_deg = std::stod(tok[13]);
         if (tok.size() > 14) cfg.glide_slope_deg = std::stod(tok[14]);
-        // We parse recompute_time if provided (index 15) but do not use it yet.
+        if (base_time_out) *base_time_out = 0.0;
+        // Optional: elapsed time from kOS (index 15)
         if (tok.size() > 15) {
-            // Placeholder: parsed but unused for now
-            double recompute_time = std::stod(tok[15]);
-            (void)recompute_time;
+            if (base_time_out) *base_time_out = std::stod(tok[15]);
         }
     } catch (...) {
         return false;
@@ -173,7 +173,7 @@ int main() {
             GFOLDConfig cfg; // start with defaults
             cfg.tf = 60.0;   // placeholder; actual tf is searched over
             cfg.g0 = 9.81;
-            if (!populate_cfg_from_tokens(tok, cfg)) {
+            if (!populate_cfg_from_tokens(tok, cfg, nullptr)) {
                 std::cerr << "Parse error on line: " << line << "\n";
                 continue;
             }
@@ -206,7 +206,8 @@ int main() {
             GFOLDConfig cfg;
             cfg.tf = best_tf;
             cfg.g0 = 9.81;
-            if (!populate_cfg_from_tokens(tok, cfg)) {
+            double base_time = 0.0;
+            if (!populate_cfg_from_tokens(tok, cfg, &base_time)) {
                 std::cerr << "Parse error on mode1 line: " << line << "\n";
                 continue;
             }
@@ -258,8 +259,25 @@ int main() {
             std::ostringstream oss;
             oss << std::setprecision(10) << std::fixed;
             oss << "COMPUTE_FINISH,1\n";
+            const double rad2deg = 180.0 / std::acos(-1.0);
             for (int i = 0; i < steps; ++i) {
-                oss << "U," << ux[i] << "," << uy[i] << "," << uz[i] << "\n";
+                const double up = ux[i];
+                const double north = uy[i];
+                const double east = uz[i];
+                const double mag = std::sqrt(up * up + north * north + east * east);
+                const double horiz = std::sqrt(north * north + east * east);
+                double hdg = 0.0;
+                if (horiz > 0.0) {
+                    hdg = std::atan2(east, north) * rad2deg;
+                    if (hdg < 0.0) hdg += 360.0;
+                }
+                const double pitch = std::atan2(up, horiz) * rad2deg;
+                const double t_abs = base_time + (static_cast<double>(i) * dt);
+                std::cout << "[mode1] U[" << i << "] mag=" << mag
+                          << " hdg=" << hdg
+                          << " pitch=" << pitch
+                          << " t=" << t_abs << "\n";
+                oss << "U," << mag << "," << hdg << "," << pitch << "," << t_abs << "\n";
             }
             oss << "DT," << dt << "\n";
             if (!atomic_write(recv_path, oss.str())) {
