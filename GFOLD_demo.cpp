@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -111,6 +112,33 @@ static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDC
     return true;
 }
 
+struct TrajectoryCache {
+    int steps = 0;
+    double tf = 0.0;
+    std::vector<double> rx;
+    std::vector<double> ry;
+    std::vector<double> rz;
+    bool valid = false;
+};
+
+static int closest_prior_index(const TrajectoryCache& traj, const double r0[3]) {
+    if (!traj.valid || traj.steps <= 0) return 0;
+    int best_idx = 0;
+    double best_d2 = (std::numeric_limits<double>::max)();
+    for (int i = 0; i < traj.steps; ++i) {
+        const double dx = traj.rx[i] - r0[0];
+        const double dy = traj.ry[i] - r0[1];
+        const double dz = traj.rz[i] - r0[2];
+        const double d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 < best_d2) {
+            best_d2 = d2;
+            best_idx = i;
+        }
+    }
+    if (best_idx > 0) best_idx -= 1;
+    return best_idx;
+}
+
 int main() {
     // Adjust this path to your KSP Scripts folder if needed.
     const fs::path send_path =
@@ -127,7 +155,7 @@ int main() {
 
     bool has_best_tf = false;
     double best_tf = 0.0;
-    bool mode1_handled = false;
+    TrajectoryCache last_traj;
 
     while (true) {
         std::this_thread::sleep_for(20ms);
@@ -160,7 +188,7 @@ int main() {
 
             has_best_tf = true;
             best_tf = res.best_tf + 5.0;
-            mode1_handled = false;
+            last_traj.valid = false;
 
             std::cout << "[mode0] best_tf=" << res.best_tf
                       << " best_m=" << res.best_m
@@ -173,7 +201,7 @@ int main() {
                     std::cerr << "Failed to write receive.txt\n";
                 }
             }
-        } else if (mode == 1 && has_best_tf && !mode1_handled) {
+        } else if (mode == 1 && has_best_tf) {
             // Populate cfg from current state, reuse best_tf
             GFOLDConfig cfg;
             cfg.tf = best_tf;
@@ -181,6 +209,13 @@ int main() {
             if (!populate_cfg_from_tokens(tok, cfg)) {
                 std::cerr << "Parse error on mode1 line: " << line << "\n";
                 continue;
+            }
+
+            if (last_traj.valid && last_traj.steps == cfg.steps && last_traj.tf > 0.0) {
+                const int idx = closest_prior_index(last_traj, cfg.r0);
+                const double dt_prev = last_traj.tf / static_cast<double>(last_traj.steps);
+                const double rem_tf = dt_prev * static_cast<double>(last_traj.steps - idx);
+                if (rem_tf > 0.0) cfg.tf = rem_tf;
             }
 
             std::cout << std::fixed << std::setprecision(6);
@@ -209,12 +244,16 @@ int main() {
             double* ux = CPG_Result.prim->u;
             double* uy = CPG_Result.prim->u + steps;
             double* uz = CPG_Result.prim->u + 2 * steps;
+            double* rx = CPG_Result.prim->r;
+            double* ry = CPG_Result.prim->r + steps;
+            double* rz = CPG_Result.prim->r + 2 * steps;
 
-            std::cout << std::fixed << std::setprecision(6);
-            for (int i = 0; i < steps; ++i) {
-                std::cout << "[mode1] U[" << i << "]=" << ux[i] << ","
-                          << uy[i] << "," << uz[i] << "\n";
-            }
+            last_traj.steps = steps;
+            last_traj.tf = cfg.tf;
+            last_traj.rx.assign(rx, rx + steps);
+            last_traj.ry.assign(ry, ry + steps);
+            last_traj.rz.assign(rz, rz + steps);
+            last_traj.valid = true;
 
             std::ostringstream oss;
             oss << std::setprecision(10) << std::fixed;
@@ -226,7 +265,6 @@ int main() {
             if (!atomic_write(recv_path, oss.str())) {
                 std::cerr << "Failed to write receive.txt\n";
             }
-            mode1_handled = true;
             std::cout << "[mode1] profile written to receive.txt\n";
         }
     }
