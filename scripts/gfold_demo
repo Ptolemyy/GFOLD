@@ -8,7 +8,7 @@ SET THROT1 TO 0.2.        // min throttle fraction
 SET THROT2 TO 0.8.        // max throttle fraction
 SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
-SET RECOMPUTE_TIME TO 0.5. // seconds (for future use)
+SET RECOMPUTE_INDEX TO 10.  // loop interval between recompute requests
 
 SET DEG2RAD TO CONSTANT:PI / 180.
 
@@ -33,25 +33,23 @@ SET ALT0 TO LATLNG(LAT0, LON0):TERRAINHEIGHT.
 //   - PC solver writes results to receive.txt.
 // receive.txt can contain:
 //   (A) Request-only: "COMPUTE_FINISH,1" -> ask us to send mode1 config.
-//   (B) Full profile: COMPUTE_FINISH + many U lines (mag,hdg,pitch,t_abs) + DT -> update U_LIST.
+//   (B) Full profile: COMPUTE_FINISH + many U lines (mag,yaw,pitch,t_abs) + DT -> update U_LIST.
 // Explicitly use Archive volume paths to match PC-side writes.
 SET SEND_FILE TO "0:/send.txt".
 SET RECV_FILE TO "0:/receive.txt".
 SET MODE TO 0.               // 0 = initial solve, 1 = mode1 recompute
 SET COMPUTE_FINISH TO 0.     // handshake flag from solver
-SET IS_RECOMPUTE TO 1.       // first mode1 state send (one-shot)
-SET MODE1_ACTIVE TO 0.       // whether we're consuming a U sequence
-SET MODE1_INDEX TO 0.        // current index into U_LIST
 SET DT_MODE1 TO 0.           // per-index time step for U_LIST
-SET NEXT_UPDATE TO 0.        // next absolute time (ELAPSED_SEC) to advance index
-SET U_LIST TO LIST().        // each entry: [u_mag,hdg_deg,pitch_deg,t_abs]
+SET U_LIST TO LIST().        // each entry: [u_mag,yaw_deg,pitch_deg,t_abs]
 SET CR TO CHAR(13).
 SET LF TO CHAR(10).
 // Fixed loop time step for pacing; elapsed time uses TIME:SECONDS.
 // ELAPSED_SEC is the single time axis for U scheduling and recompute.
 SET LOOP_DT TO 0.05.
-SET LAST_TIME_SEC TO TIME:SECONDS.
+SET TIME0_SEC TO TIME:SECONDS.
 SET ELAPSED_SEC TO 0.        // global time since script start
+SET LOOP_INDEX TO 0.
+SET U_INDEX TO 0.
 SET LAST_THR_CMD TO 0.0.       // last throttle command (0..1)
 SET LAST_U_UP TO 0.          // last U magnitude (m/s^2)
 SET LAST_U_NORTH TO 0.       // last heading (deg)
@@ -60,14 +58,12 @@ SET ATM_AT TO 1.0.
 SET HAS_CUR_U TO 0.          // whether we have a valid U to apply
 SET NEXT_RECOMPUTE TO 0.     // next absolute time (ELAPSED_SEC) to request recompute
 SET RECOMPUTE_PENDING TO 0.  // recompute requested but not answered yet
+SET HAS_U_LIST TO 0.         // whether U_LIST is valid
 
 // On start, clear send.txt if it exists
 IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
 // Also clear stale receive.txt to avoid running old/invalid commands
 IF EXISTS(RECV_FILE) { DELETEPATH(RECV_FILE). }.
-
-// Make sure receive.txt exists for PC side to use later
-IF NOT EXISTS(RECV_FILE) { CREATE(RECV_FILE). }.
 
 // ===== Helper to compute ENU + velocity/state =====
 // Build ENU state and vehicle parameters for solver input.
@@ -129,13 +125,14 @@ FUNCTION CALC_STATE {
 
 // Apply precomputed thrust direction + magnitude.
 // U magnitude is acceleration (m/s^2); throttle = |U| * mass / available_thrust.
+// Yaw/Pitch are in degrees and used with cooked steering.
 // Throttle is recomputed every loop using current mass and thrust availability.
 FUNCTION APPLY_THRUST {
-  PARAMETER U_MAG, HDG_DEG, PITCH_DEG.
+  PARAMETER U_MAG, YAW_DEG, PITCH_DEG.
   SET LAST_U_UP TO U_MAG.
-  SET LAST_U_NORTH TO HDG_DEG.
+  SET LAST_U_NORTH TO YAW_DEG.
   SET LAST_U_EAST TO PITCH_DEG.
-  IF U_MAG <> U_MAG OR HDG_DEG <> HDG_DEG OR PITCH_DEG <> PITCH_DEG {
+  IF U_MAG <> U_MAG OR YAW_DEG <> YAW_DEG OR PITCH_DEG <> PITCH_DEG {
     LOCK THROTTLE TO 0.
     SET LAST_THR_CMD TO 0.
     RETURN.
@@ -147,18 +144,8 @@ FUNCTION APPLY_THRUST {
     RETURN.
   }.
 
-  // Convert target heading/pitch to control inputs (simple P controller).
-  LOCAL CUR_HDG IS SHIP:FACING:VECTOR:HEADING.
-  LOCAL CUR_PITCH IS SHIP:FACING:VECTOR:PITCH.
-  LOCAL ERR_HDG IS HDG_DEG - CUR_HDG.
-  IF ERR_HDG > 180 { SET ERR_HDG TO ERR_HDG - 360. }.
-  IF ERR_HDG < -180 { SET ERR_HDG TO ERR_HDG + 360. }.
-  LOCAL ERR_PITCH IS PITCH_DEG - CUR_PITCH.
-  LOCAL YAW_CMD IS MAX(-1, MIN(1, ERR_HDG / 30)).
-  LOCAL PITCH_CMD IS MAX(-1, MIN(1, ERR_PITCH / 30)).
-  SET SHIP:CONTROL:YAW TO YAW_CMD.
-  SET SHIP:CONTROL:PITCH TO PITCH_CMD.
-  SET SHIP:CONTROL:ROLL TO 0.
+  // Cooked steering (autopilot): point craft to desired heading/pitch.
+  LOCK STEERING TO HEADING(YAW_DEG, PITCH_DEG).
   
   LOCAL THR_CMD IS U_MAG * SHIP:MASS / (THRUST_AVAIL).
   SET THR_CMD TO MIN(THROT2, MAX(THR_CMD, 0)).
@@ -206,8 +193,6 @@ FUNCTION SEND_MODE1_STATE {
 }
 
 // ===== Single-shot mode0 compute and write =====
-// Initial request to solver. PC will respond with COMPUTE_FINISH,1 to
-// request a mode1 state line, or later a full U profile.
 LOCAL STATE IS CALC_STATE().
 SET EAST_M TO STATE[0].
 SET NORTH_M TO STATE[1].
@@ -220,7 +205,6 @@ SET THRUST_MAX TO STATE[7].
 SET ISP_CUR TO STATE[8].
 SET MASS_WET TO STATE[9].
 
-// Pack and write mode0
 SET OUT_LINE TO MODE + "," +
                ROUND(EAST_M,1) + "," +
                ROUND(NORTH_M,1) + "," +
@@ -244,20 +228,30 @@ f:CLEAR().
 f:WRITELN(OUT_LINE).
 PRINT "SEND MODE0: " + OUT_LINE.
 
-// ===== Main loop: read solver outputs, trigger recompute, and apply U =====
+// ===== Wait for initial mode0 response =====
+// Block until PC creates receive.txt (mode0 done). Then delete it and continue.
+UNTIL EXISTS(RECV_FILE) {
+  WAIT 0.05.
+}.
+SET rf0 TO OPEN(RECV_FILE).
+rf0:CLEAR().
+DELETEPATH(RECV_FILE).
+SET TIME0_SEC TO TIME:SECONDS.
+SET LOOP_INDEX TO 0.
+SET U_INDEX TO 0.
+SET HAS_U_LIST TO 0.
+
+// ===== Main loop: single time axis from TIME0_SEC =====
 UNTIL FALSE {
   SET NOW_SEC TO TIME:SECONDS.
-  // Single time axis:
-  // - ELAPSED_SEC: global time since script start (used for U timestamps and recompute).
-  IF NOW_SEC < LAST_TIME_SEC {
-    SET ELAPSED_SEC TO ELAPSED_SEC + (NOW_SEC + 60 - LAST_TIME_SEC).
-  } ELSE {
-    SET ELAPSED_SEC TO ELAPSED_SEC + (NOW_SEC - LAST_TIME_SEC).
+  SET ELAPSED_SEC TO NOW_SEC - TIME0_SEC.
+  // On first loop, send initial mode1 config.
+  IF LOOP_INDEX = 0 {
+    SEND_MODE1_STATE().
+    SET RECOMPUTE_PENDING TO 1.
   }.
-  SET LAST_TIME_SEC TO NOW_SEC.
 
   // Read solver output from receive.txt (if any).
-  // We parse lines into NEW_U_LIST + NEW_DT_MODE1 and only swap in if valid.
   IF EXISTS(RECV_FILE) {
     SET RECV_LINE TO OPEN(RECV_FILE):READALL:STRING.
     IF RECV_LINE <> "" {
@@ -269,8 +263,6 @@ UNTIL FALSE {
       SET NEW_U_LIST TO LIST().
       SET RECV_LINE TO RECV_LINE:REPLACE(CR, "").
       SET RECV_LINES TO RECV_LINE:SPLIT(LF).
-      // Parse COMPUTE_FINISH, DT, and U lines into NEW_U_LIST.
-      // If only COMPUTE_FINISH is present, NEW_VALID stays 0 and U_LIST is kept.
       FOR L IN RECV_LINES {
         IF L <> "" {
           SET PARTS TO L:SPLIT(",").
@@ -279,10 +271,10 @@ UNTIL FALSE {
               SET HAS_FINISH TO 1.
             } ELSE IF PARTS[0] = "U" AND PARTS:LENGTH >= 5 {
               SET U_MAG TO PARTS[1]:TONUMBER.
-              SET U_HDG TO PARTS[2]:TONUMBER.
+              SET U_YAW TO PARTS[2]:TONUMBER.
               SET U_PITCH TO PARTS[3]:TONUMBER.
               SET U_T TO PARTS[4]:TONUMBER.
-              NEW_U_LIST:ADD(LIST(U_MAG, U_HDG, U_PITCH, U_T)).
+              NEW_U_LIST:ADD(LIST(U_MAG, U_YAW, U_PITCH, U_T)).
               SET U_COUNT TO U_COUNT + 1.
             } ELSE IF PARTS[0] = "DT" {
               SET NEW_DT_MODE1 TO PARTS[1]:TONUMBER.
@@ -291,88 +283,55 @@ UNTIL FALSE {
           }.
         }.
       }.
-        IF HAS_FINISH = 1 {
-          // New profile received: only swap in if it is valid (has U + DT).
-          SET NEW_VALID TO 0.
-          IF U_COUNT > 0 AND SEEN_DT = 1 AND NEW_DT_MODE1 > 0 { SET NEW_VALID TO 1. }.
-          IF NEW_VALID = 1 {
-            SET U_LIST TO NEW_U_LIST.
-            SET DT_MODE1 TO NEW_DT_MODE1.
-          }.
-          // Any COMPUTE_FINISH clears the recompute pending flag.
-          SET RECOMPUTE_PENDING TO 0.
-          IF RECOMPUTE_TIME > 0 { SET NEXT_RECOMPUTE TO ELAPSED_SEC + RECOMPUTE_TIME. }.
-
-        SET HAS_U TO 0.
-        IF U_LIST:LENGTH > 0 { SET HAS_U TO 1. }.
-        IF HAS_U = 1 AND DT_MODE1 > 0 {
-          SET COMPUTE_FINISH TO 1.
-        } ELSE IF HAS_U = 0 AND DT_MODE1 <= 0 {
-          SET COMPUTE_FINISH TO 1.
+      IF HAS_FINISH = 1 {
+        SET NEW_VALID TO 0.
+        IF U_COUNT > 0 AND SEEN_DT = 1 AND NEW_DT_MODE1 > 0 { SET NEW_VALID TO 1. }.
+        IF NEW_VALID = 1 {
+          SET U_LIST TO NEW_U_LIST.
+          SET DT_MODE1 TO NEW_DT_MODE1.
+          SET HAS_U_LIST TO 1.
+          SET U_INDEX TO 0.
         }.
-        IF COMPUTE_FINISH = 1 {
-          IF NEW_VALID = 1 {
-            SET rf TO OPEN(RECV_FILE).
-            rf:CLEAR().
-          }.
-          PRINT "COMPUTE_FINISH".
-          PRINT U_LIST:LENGTH.
-          IF NEW_VALID = 1 AND U_LIST:LENGTH > 0 {
-            // Load new U list; index will be chosen by time-based update below.
-            SET MODE1_ACTIVE TO 1.
-            SET MODE1_INDEX TO 0.
-            SET NEXT_UPDATE TO U_LIST[0][3].
-            SET HAS_CUR_U TO 0.
-          }.
-          IF IS_RECOMPUTE = 1 {
-            // First time: immediately request mode1 solve.
-            SEND_MODE1_STATE().
-            SET IS_RECOMPUTE TO 0.
-            SET RECOMPUTE_PENDING TO 1.
-          }.
+        SET RECOMPUTE_PENDING TO 0.
+        IF NEW_VALID = 1 {
+          SET rf TO OPEN(RECV_FILE).
+          rf:CLEAR().
         }.
       }.
     }.
   }.
+
   // Periodic recompute trigger: request a new solve while continuing to use old U.
-  IF MODE1_ACTIVE = 1 AND RECOMPUTE_TIME > 0 AND RECOMPUTE_PENDING = 0 AND ELAPSED_SEC >= NEXT_RECOMPUTE {
-    PRINT "RECOMPUTE_TRIGGER t=" + ROUND(ELAPSED_SEC,2).
+  IF RECOMPUTE_PENDING = 0 AND LOOP_INDEX >= RECOMPUTE_INDEX {
+    PRINT "RECOMPUTE_TRIGGER idx=" + LOOP_INDEX.
     SEND_MODE1_STATE().
     SET RECOMPUTE_PENDING TO 1.
+    SET LOOP_INDEX TO 0.
   }.
-  // Advance U index by absolute timestamps in U_LIST.
-  IF MODE1_ACTIVE = 1 {
-    IF U_LIST:LENGTH = 0 {
-      SET MODE1_ACTIVE TO 0.
-      LOCK THROTTLE TO 0.
-      SET LAST_THR_CMD TO 0.
-      SET HAS_CUR_U TO 0.
-    } ELSE {
-      // Advance index based on absolute timestamps stored in U_LIST.
-      SET T_UNTIL1_START TO TIME:SECONDS.
-      UNTIL (MODE1_INDEX + 1) >= U_LIST:LENGTH OR ELAPSED_SEC < U_LIST[MODE1_INDEX + 1][3] {
-        SET MODE1_INDEX TO MODE1_INDEX + 1.
-      }.
-      SET T_UNTIL1_END TO TIME:SECONDS.
-      PRINT "until1_dt=" + ROUND(T_UNTIL1_END - T_UNTIL1_START,3).
-      IF MODE1_INDEX >= U_LIST:LENGTH {
-        // U list exhausted: stop thrust.
-        SET MODE1_ACTIVE TO 0.
+
+  // Select U by absolute time stamps; advance index when time passes.
+  IF HAS_U_LIST = 1 AND U_INDEX < U_LIST:LENGTH {
+    IF ELAPSED_SEC >= U_LIST[U_INDEX][3] {
+      SET U_CUR TO U_LIST[U_INDEX].
+      IF U_CUR[0] = 0 {
         LOCK THROTTLE TO 0.
-        SET LAST_THR_CMD TO 0.
         SET HAS_CUR_U TO 0.
-        PRINT "MODE1_DONE".
-      } ELSE {
-        SET U_CUR TO U_LIST[MODE1_INDEX].
-        APPLY_THRUST(U_CUR[0], U_CUR[1], U_CUR[2]).
-        SET HAS_CUR_U TO 1.
+        PRINT "U_ZERO_STOP".
+        BREAK.
       }.
+      APPLY_THRUST(U_CUR[0], U_CUR[1], U_CUR[2]).
+      SET HAS_CUR_U TO 1.
+      SET U_INDEX TO U_INDEX + 1.
     }.
   }.
-  // Re-apply current U every loop so throttle tracks changing mass.
-  IF MODE1_ACTIVE = 1 AND HAS_CUR_U = 1 {
+
+  // Apply last U every loop so throttle tracks changing mass.
+  IF HAS_CUR_U = 1 {
     APPLY_THRUST(LAST_U_UP, LAST_U_NORTH, LAST_U_EAST).
   }.
+
+  SET LOOP_INDEX TO LOOP_INDEX + 1.
+
   // Telemetry output for debugging (horizontal error, thrust, mass).
   SET ATM_AT TO SHIP:BODY:ATM:ALTITUDEPRESSURE(SHIP:ALTITUDE).
   SET STATE TO CALC_STATE().

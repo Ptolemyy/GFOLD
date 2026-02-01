@@ -260,25 +260,32 @@ int main() {
             oss << std::setprecision(10) << std::fixed;
             oss << "COMPUTE_FINISH,1\n";
             const double rad2deg = 180.0 / std::acos(-1.0);
-            for (int i = 0; i < steps; ++i) {
+            const double min_dt = 0.2;
+            const int stride = (std::max)(1, static_cast<int>(std::ceil(min_dt / dt)));
+            double last_t_abs = base_time;
+            for (int i = 0; i < steps; i += stride) {
                 const double up = ux[i];
                 const double north = uy[i];
                 const double east = uz[i];
                 const double mag = std::sqrt(up * up + north * north + east * east);
                 const double horiz = std::sqrt(north * north + east * east);
-                double hdg = 0.0;
+                double yaw_deg = 0.0;
                 if (horiz > 0.0) {
-                    hdg = std::atan2(east, north) * rad2deg;
-                    if (hdg < 0.0) hdg += 360.0;
+                    yaw_deg = std::atan2(east, north) * rad2deg;
+                    if (yaw_deg < 0.0) yaw_deg += 360.0;
                 }
-                const double pitch = std::atan2(up, horiz) * rad2deg;
+                const double pitch_deg = std::atan2(up, horiz) * rad2deg;
                 const double t_abs = base_time + (static_cast<double>(i) * dt);
+                last_t_abs = t_abs;
                 std::cout << "[mode1] U[" << i << "] mag=" << mag
-                          << " hdg=" << hdg
-                          << " pitch=" << pitch
+                          << " yaw=" << yaw_deg
+                          << " pitch=" << pitch_deg
                           << " t=" << t_abs << "\n";
-                oss << "U," << mag << "," << hdg << "," << pitch << "," << t_abs << "\n";
+                oss << "U," << mag << "," << yaw_deg << "," << pitch_deg << "," << t_abs << "\n";
             }
+            // Append a zero-magnitude thrust command to signal end.
+            const double end_t = last_t_abs + (static_cast<double>(stride) * dt);
+            oss << "U," << 0.0 << "," << 0.0 << "," << 90.0 << "," << end_t << "\n";
             oss << "DT," << dt << "\n";
             if (!atomic_write(recv_path, oss.str())) {
                 std::cerr << "Failed to write receive.txt\n";
