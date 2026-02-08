@@ -91,7 +91,7 @@ int main()
     GFOLDThrustProfile profile = solver.compute_thrust_profile();
 
     // ---- plot ----
-    py::scoped_interpreter guard{};
+    py::scoped_interpreter guard{};\
     auto plt = matplotlibcpp17::pyplot::import();
     auto fig = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(10, 6)));
 

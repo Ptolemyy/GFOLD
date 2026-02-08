@@ -1,34 +1,83 @@
-SET LASTID TO "".
-PRINT "pingpong running (VolumeFile API, no CHR).".
-
-IF NOT EXISTS("comm.txt") {
-  CREATE("comm.txt").
-  OPEN("comm.txt"):WRITELN("INIT").
-}
-
-UNTIL FALSE {
-
-  // 因为我们写回时会 CLEAR + WRITELN，文件永远只有一行
-  SET line TO OPEN("comm.txt"):READALL:STRING.
-
-  IF line:STARTSWITH("PING,") {
-    SET parts TO line:SPLIT(",").
-    IF parts:LENGTH >= 2 {
-      SET id TO parts[1].
-
-      IF id <> LASTID {
-        SET LASTID TO id.
-
-        SET reply TO "PONG," + id + "," + ROUND(TIME:SECONDS,3).
-
-        SET f TO OPEN("comm.txt").
-        f:CLEAR().
-        f:WRITELN(reply).
-
-        PRINT "Reply: " + reply.
-      }
-    }
-  }
-
-  WAIT 0.02.
-}
+SET LAST_SEQ TO "".
+SET CR TO CHAR(13).
+SET LF TO CHAR(10).
+SET DATA_FILE TO "comm.txt".
+SET READY_FILE TO "comm_ready.txt".
+SET ACK_FILE TO "comm_ack.txt".
+
+PRINT "pingpong data reader running (mode0 burst).".
+
+IF NOT EXISTS(DATA_FILE) {
+  CREATE(DATA_FILE).
+  OPEN(DATA_FILE):WRITELN("INIT").
+}.
+IF EXISTS(READY_FILE) { DELETEPATH(READY_FILE). }.
+IF EXISTS(ACK_FILE) { DELETEPATH(ACK_FILE). }.
+
+FUNCTION COUNT_LINES {
+  PARAMETER TEXT.
+  LOCAL count IS 0.
+  LOCAL lines IS TEXT:SPLIT(LF).
+  FOR L IN lines {
+    IF L <> "" {
+      SET count TO count + 1.
+    }.
+  }.
+  RETURN count.
+}
+
+UNTIL FALSE {
+  IF NOT EXISTS(DATA_FILE) {
+    WAIT 0.05.
+  } ELSE {
+    // Wait for ready flag, then read and parse data (gfold_demo style).
+    IF EXISTS(READY_FILE) {
+      SET ready_line TO OPEN(READY_FILE):READALL:STRING.
+      SET ready_line TO ready_line:REPLACE(CR, "").
+      SET ready_parts TO ready_line:SPLIT(",").
+      IF ready_parts:LENGTH >= 2 AND ready_parts[0] = "READY" {
+        SET seq TO ready_parts[1].
+        IF seq <> LAST_SEQ {
+          SET LAST_SEQ TO seq.
+          SET t_parse_start TO TIME:SECONDS.
+
+          SET content TO OPEN(DATA_FILE):READALL:STRING.
+          SET content TO content:REPLACE(CR, "").
+          SET lines TO content:SPLIT(LF).
+          SET DATA_ROWS TO LIST().
+          FOR L IN lines {
+            IF L <> "" {
+              SET PARTS TO L:SPLIT(",").
+              IF PARTS:LENGTH >= 4 {
+                SET U_MAG TO PARTS[0]:TONUMBER.
+                SET U_YAW TO PARTS[1]:TONUMBER.
+                SET U_PITCH TO PARTS[2]:TONUMBER.
+                SET U_T TO PARTS[3]:TONUMBER.
+                DATA_ROWS:ADD(LIST(U_MAG, U_YAW, U_PITCH, U_T)).
+              }.
+            }.
+          }.
+
+          SET t_parse_end TO TIME:SECONDS.
+          SET parse_ms TO (t_parse_end - t_parse_start) * 1000.
+
+          IF EXISTS(ACK_FILE) { DELETEPATH(ACK_FILE). }.
+          CREATE(ACK_FILE).
+          SET af TO OPEN(ACK_FILE).
+          af:CLEAR().
+          af:WRITELN("ACK," + seq + "," + ROUND(parse_ms,3) + "," + DATA_ROWS:LENGTH).
+
+          SET rf TO OPEN(READY_FILE).
+          rf:CLEAR().
+          DELETEPATH(READY_FILE).
+
+          PRINT "ACK sent: seq=" + seq +
+                " rows=" + DATA_ROWS:LENGTH +
+                " parse(ms)=" + ROUND(parse_ms,3).
+        }.
+      }.
+    }.
+
+    WAIT 0.02.
+  }.
+}

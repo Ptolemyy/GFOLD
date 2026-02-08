@@ -39,8 +39,8 @@ void GFOLDSolver::update_state() const {
     cpg_update_dt(dt);
     cpg_update_a_dt(fuel_consumption * dt);
     cpg_update_g_dt(0, -cfg_.g0 * dt);
-    cpg_update_dt_squared(dt * dt);
-    cpg_update_g_dt_sq(0, -cfg_.g0 * dt * dt);
+    //cpg_update_dt_squared(dt * dt);
+    //cpg_update_g_dt_sq(0, -cfg_.g0 * dt * dt);
 
     const double throt1 = cfg_.throttle_min;
     const double throt2 = cfg_.throttle_max;

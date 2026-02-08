@@ -263,6 +263,7 @@ UNTIL FALSE {
       SET NEW_U_LIST TO LIST().
       SET RECV_LINE TO RECV_LINE:REPLACE(CR, "").
       SET RECV_LINES TO RECV_LINE:SPLIT(LF).
+      SET t_loop_start_ms TO ROUND(TIME:SECONDS * 1000, 0).
       FOR L IN RECV_LINES {
         IF L <> "" {
           SET PARTS TO L:SPLIT(",").
@@ -283,6 +284,9 @@ UNTIL FALSE {
           }.
         }.
       }.
+      SET t_loop_end_ms TO ROUND(TIME:SECONDS * 1000, 0).
+      SET loop_ms TO t_loop_end_ms - t_loop_start_ms.
+      PRINT "recv_lines loop(ms)=" + loop_ms + " lines=" + RECV_LINES:LENGTH.
       IF HAS_FINISH = 1 {
         SET NEW_VALID TO 0.
         IF U_COUNT > 0 AND SEEN_DT = 1 AND NEW_DT_MODE1 > 0 { SET NEW_VALID TO 1. }.
