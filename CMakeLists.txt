@@ -14,13 +14,22 @@ find_package(Python3 COMPONENTS Interpreter Development)
 find_package(pybind11 REQUIRED)
 find_package(matplotlibcpp17 REQUIRED)
 
-add_subdirectory(./p4_cpg_solver/c/)
+# ===== Select cvxpygen solver resolution =====
+# Generated solvers live under p4_cpg_solver_<N>/c/.
+# Default N=100; override with -DGFOLD_CPG_N=75 (or 50/25/10).
+set(GFOLD_CPG_N 100 CACHE STRING "CPG solver discretization steps (100/75/50/25/10)")
+set(CPG_SOLVER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/p4_cpg_solver_${GFOLD_CPG_N}/c")
+if(NOT EXISTS "${CPG_SOLVER_DIR}/CMakeLists.txt")
+    message(FATAL_ERROR "CPG solver dir not found: ${CPG_SOLVER_DIR}. Run solver.py --gen or choose an existing N.")
+endif()
+add_subdirectory(${CPG_SOLVER_DIR})
 
 add_executable(test_solver main.cpp GFOLD_solver.cpp)
 add_executable(GFOLD_demo GFOLD_demo.cpp GFOLD_solver.cpp find_tf_2.cpp)
 
 target_include_directories(test_solver PUBLIC 
         ${cpg_include}  
+        ${CPG_SOLVER_DIR}/solver_code
         ${Python3_INCLUDE_DIRS})
 
 target_link_libraries(test_solver 
@@ -32,6 +41,7 @@ target_link_libraries(test_solver
 
 target_include_directories(GFOLD_demo PUBLIC 
         ${cpg_include}  
+        ${CPG_SOLVER_DIR}/solver_code
         ${Python3_INCLUDE_DIRS})
 
 target_link_libraries(GFOLD_demo 
@@ -42,6 +52,7 @@ add_executable(find_tf find_tf.cpp GFOLD_solver.cpp)
 
 target_include_directories(find_tf PUBLIC 
         ${cpg_include}  
+        ${CPG_SOLVER_DIR}/solver_code
         ${Python3_INCLUDE_DIRS})
 
 target_link_libraries(find_tf 
@@ -52,3 +63,7 @@ target_link_libraries(find_tf
 )
 
 add_executable(kos_pingpong kos_pingpong.cpp)
+
+foreach(tgt IN ITEMS test_solver GFOLD_demo find_tf kos_pingpong)
+    target_compile_definitions(${tgt} PRIVATE GFOLD_CPG_N=${GFOLD_CPG_N})
+endforeach()

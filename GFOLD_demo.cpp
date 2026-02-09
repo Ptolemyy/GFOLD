@@ -258,12 +258,13 @@ int main() {
 
             std::ostringstream oss;
             oss << std::setprecision(10) << std::fixed;
+            int recv_lines = 0;
             oss << "COMPUTE_FINISH,1\n";
+            recv_lines += 1;
             const double rad2deg = 180.0 / std::acos(-1.0);
-            const double min_dt = 0.2;
-            const int stride = (std::max)(1, static_cast<int>(std::ceil(min_dt / dt)));
             double last_t_abs = base_time;
-            for (int i = 0; i < steps; i += stride) {
+            const int max_lines = 10;
+            for (int i = 0; i < steps && i < max_lines; ++i) {
                 const double up = ux[i];
                 const double north = uy[i];
                 const double east = uz[i];
@@ -282,15 +283,18 @@ int main() {
                           << " pitch=" << pitch_deg
                           << " t=" << t_abs << "\n";
                 oss << "U," << mag << "," << yaw_deg << "," << pitch_deg << "," << t_abs << "\n";
+                recv_lines += 1;
             }
             // Append a zero-magnitude thrust command to signal end.
-            const double end_t = last_t_abs + (static_cast<double>(stride) * dt);
+            const double end_t = last_t_abs + dt;
             oss << "U," << 0.0 << "," << 0.0 << "," << 90.0 << "," << end_t << "\n";
+            recv_lines += 1;
             oss << "DT," << dt << "\n";
+            recv_lines += 1;
             if (!atomic_write(recv_path, oss.str())) {
                 std::cerr << "Failed to write receive.txt\n";
             }
-            std::cout << "[mode1] profile written to receive.txt\n";
+            std::cout << "[mode1] profile written to receive.txt (lines=" << recv_lines << ")\n";
         }
     }
 

@@ -312,26 +312,29 @@ CMAKE_TAPI:FILEPATH=CMAKE_TAPI-NOTFOUND
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
+//CPG solver discretization steps (100/75/50/25/10)
+GFOLD_CPG_N:STRING=100
+
 //Whether to use Long or Int for index type.
 USE_LONG:BOOL=ON
 
 //Value Computed by CMake
-cvxpygen_BINARY_DIR:STATIC=C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c
+cvxpygen_BINARY_DIR:STATIC=C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver_100/c
 
 //Value Computed by CMake
 cvxpygen_IS_TOP_LEVEL:STATIC=OFF
 
 //Value Computed by CMake
-cvxpygen_SOURCE_DIR:STATIC=C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c
+cvxpygen_SOURCE_DIR:STATIC=C:/Users/32796/Desktop/GFOLD/p4_cpg_solver_100/c
 
 //Value Computed by CMake
-ecos_BINARY_DIR:STATIC=C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/solver_code
+ecos_BINARY_DIR:STATIC=C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver_100/c/solver_code
 
 //Value Computed by CMake
 ecos_IS_TOP_LEVEL:STATIC=OFF
 
 //Value Computed by CMake
-ecos_SOURCE_DIR:STATIC=C:/Users/32796/Desktop/GFOLD/p4_cpg_solver/c/solver_code
+ecos_SOURCE_DIR:STATIC=C:/Users/32796/Desktop/GFOLD/p4_cpg_solver_100/c/solver_code
 
 //Value Computed by CMake
 gfold_BINARY_DIR:STATIC=C:/Users/32796/Desktop/GFOLD/build

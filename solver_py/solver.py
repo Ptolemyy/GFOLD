@@ -24,6 +24,7 @@ Provides:
 
 import numpy as np
 import cvxpy as cp
+import copy
 from config import *
 import os
 os.environ["CMAKE_GENERATOR"] = "Visual Studio 17 2022"
@@ -33,8 +34,10 @@ from cvxpygen import cpg
 from EvilPlotting import plot_run3D
 
 class LCvxSolver:
-    def __init__(self, params=params, bnd=bnd,problem_type='p4'):
-        self.params = params
+    def __init__(self, params=params, bnd=bnd, problem_type='p4', N_override=None):
+        self.params = copy.copy(params)
+        if N_override is not None:
+            self.params.N  = N_override
         self.bnd = bnd
         self.lcvx_solve(problem_type=problem_type)
         
@@ -178,24 +181,60 @@ class LCvxSolver:
         print("Generating code for P3 and P4...")
         cpg.generate_code(self.problem, code_dir=code_dir, solver=cp.ECOS,wrapper=False)
         print("Code generation complete.")
-        
+
+def _strip_m_link_guard(code_dir: str):
+    """
+    After cvxpygen emit, remove the auto-added
+      if(NOT MSVC) target_link_libraries(ecos PRIVATE m) endif()
+    block in c/solver_code/CMakeLists.txt to keep MSVC builds clean.
+    """
+    cmake_path = os.path.join(code_dir, "c", "solver_code", "CMakeLists.txt")
+    if not os.path.exists(cmake_path):
+        return
+    with open(cmake_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    out = []
+    skip = False
+    changed = False
+    for ln in lines:
+        if not skip and ln.strip().startswith("if(NOT MSVC"):
+            skip = True
+            changed = True
+            continue
+        if skip:
+            if ln.strip().startswith("endif()"):
+                skip = False
+                continue
+            continue
+        out.append(ln)
+
+    if changed:
+        with open(cmake_path, "w", encoding="utf-8") as f:
+            f.writelines(out)
+        print(f"Stripped MSVC guard in {cmake_path}")
+
 
 if __name__ == '__main__':
     import argparse
 
     solver_p3 = LCvxSolver(problem_type='p3')
-    solver_p4 = LCvxSolver(problem_type='p4')
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--gen", action="store_true", default=True)
-    parser.add_argument("--plot", action="store_true",default=False)
+    parser.add_argument("--plot", action="store_true", default=False)
     _args = parser.parse_args()
     
     if _args.gen:
         solver_p3.generate_code(code_dir="p3_cpg_solver")
-        solver_p4.generate_code(code_dir="p4_cpg_solver")
+        _strip_m_link_guard("p3_cpg_solver")
+        for n in [100, 75, 50, 25, 10]:
+            solver_p4_n = LCvxSolver(problem_type='p4', N_override=n)
+            solver_p4_n.generate_code(code_dir=f"p4_cpg_solver_{n}")
+            _strip_m_link_guard(f"p4_cpg_solver_{n}")
     elif _args.plot:
         print("Plotting results...")
+        solver_p4 = LCvxSolver(problem_type='p4')
         m_p3, r_p3, v_p3, u_p3, z_p3, s_p3 = solver_p3.solve_direct()
         m_p4, r_p4, v_p4, u_p4, z_p4, s_p4 = solver_p4.solve_direct()
         plot_run3D(params.dt*params.N, r_p4, v_p4, z_p4, u_p4, m_p4, s_p4, params, bnd)

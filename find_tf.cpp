@@ -195,20 +195,20 @@ int main()
     GFOLDConfig cfg;
     cfg.steps = 100;
     cfg.tf = 30.154781;
-    cfg.g0 = 9.81;
-    cfg.Isp = 262.9;
-    cfg.T_max = 176600.0;
+    cfg.g0 = 3.71;
+    cfg.Isp = 2000/3.71;
+    cfg.T_max = 24000.0;
     cfg.throttle_min = 0.2;
     cfg.throttle_max = 0.8;
-    cfg.m0 = 5600.0;
-    cfg.r0[0] = 1422.7;
-    cfg.r0[1] = -1.600;
-    cfg.r0[2] = 0.900;
-    cfg.v0[0] = -7.38;
-    cfg.v0[1] = 0.0;
-    cfg.v0[2] = 0.0;
+    cfg.m0 = 2000.0;
+    cfg.r0[0] = 2400.0;
+    cfg.r0[1] = 450.00;
+    cfg.r0[2] = -330.00;
+    cfg.v0[0] = -10.00;
+    cfg.v0[1] = -40.0;
+    cfg.v0[2] = 10.0;
     cfg.glide_slope_deg = 30.0;
-    cfg.max_angle_deg = 45.0;
+    cfg.max_angle_deg = 90.0;
 
     GFOLDSolver solver(cfg);
 
@@ -229,7 +229,7 @@ int main()
     std::cout << "golden best tf = " << best_tf << ", m = " << best_m << "\n";
 
     //cfg.tf = best_tf;
-    cfg.tf = 31.0;
+    cfg.tf = best_tf;
     solver.set_config(cfg);
     if (!solver.solve()) {
         std::cout << "Best tf solution infeasible, status = "

@@ -39,7 +39,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver/c/cmake_install.cmake")
+  include("C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver_100/c/cmake_install.cmake")
 
 endif()
 

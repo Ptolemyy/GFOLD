@@ -1,5 +1,6 @@
 # Ignore generated solver directories
 p4_cpg_solver/
+p4_cpg_solver_*/
 p3_cpg_solver/
 build/
 .vscode/

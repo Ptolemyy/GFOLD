@@ -16,79 +16,56 @@ namespace py = pybind11;
 
 int main()
 {
-    // Problem setup (callers can change these before solving)
-    GFOLDConfig cfg;
-    cfg.steps = 100;
-    cfg.tf = 31.726;
-    cfg.g0 = 9.81;
-    cfg.Isp = 262.9;
-    cfg.T_max = 176400.0;
-    cfg.throttle_min = 0.2;
-    cfg.throttle_max = 0.8;
-    cfg.m0 = 5400.0;
-    cfg.r0[0] = 1379.700000;
-    cfg.r0[1] = -6.300;
-    cfg.r0[2] = -5.100;
-    cfg.v0[0] = -7.38;
-    cfg.v0[1] = 0.0;
-    cfg.v0[2] = 0.0;
-    cfg.glide_slope_deg = 30.0;
-    cfg.max_angle_deg = 45.0;
+    const int built_N = GFOLD_CPG_N; // passed via CMake target_compile_definitions
+    std::vector<int> test_Ns = {100, 75, 50, 25, 10};
 
-    GFOLDSolver solver(cfg);
+    GFOLDThrustProfile profile; // keep the one we plot (N=100 expected)
+    GFOLDConfig plot_cfg{};     // capture cfg used for the plotted profile
     
-    auto start = std::chrono::steady_clock::now();
-    const bool ok = solver.solve();
-    auto end = std::chrono::steady_clock::now(); 
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Solve time: " << duration.count() << " ms\n";
+    for (int N : test_Ns) {
+        if (N != built_N) {
+            std::cout << "[main] Skip N=" << N
+                      << " (rebuild with -DGFOLD_CPG_N=" << N << " to benchmark)\n";
+            continue;
+        }
 
-    std::cout << "Solver status: " << solver.status() << "\n";
-    if (!ok) {
-        std::cout << "Infeasible\n";
-        system("pause");
-        return 0;
+        // Problem setup
+        GFOLDConfig cfg;
+        cfg.steps = N;
+        cfg.tf = 31.726;
+        cfg.g0 = 9.81;
+        cfg.Isp = 262.9;
+        cfg.T_max = 176400.0;
+        cfg.throttle_min = 0.2;
+        cfg.throttle_max = 0.8;
+        cfg.m0 = 5400.0;
+        cfg.r0[0] = 1379.700000;
+        cfg.r0[1] = -6.300;
+        cfg.r0[2] = -5.100;
+        cfg.v0[0] = -7.38;
+        cfg.v0[1] = 0.0;
+        cfg.v0[2] = 0.0;
+        cfg.glide_slope_deg = 30.0;
+        cfg.max_angle_deg = 45.0;
+
+        GFOLDSolver solver(cfg);
+
+        auto start = std::chrono::steady_clock::now();
+        const bool ok = solver.solve();
+        auto end = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        std::cout << "[main] N=" << N << " solve time: " << duration.count() << " ms\n";
+
+        if (!ok) {
+            std::cout << "Infeasible for N=" << N << "\n";
+            continue;
+        }
+
+        if (N == 100) {
+            profile = solver.compute_thrust_profile();
+            plot_cfg = solver.config(); // capture cfg for plotting bounds
+        }
     }
-
-    std::vector<double> vec_x;
-    std::vector<double> vec_y;
-    std::vector<double> vec_z;
-    std::vector<double> vec_ux;
-    std::vector<double> vec_uy;
-    std::vector<double> vec_uz;
-
-    const int steps = solver.config().steps;
-    double *px = CPG_Result.prim->r, *pyv = CPG_Result.prim->r + steps, *pz = CPG_Result.prim->r + 2*steps,
-            *ux = CPG_Result.prim->u, *uy = CPG_Result.prim->u + steps, *uz = CPG_Result.prim->u + 2*steps;
-
-    for (int i = 0; i < steps; i++) {
-        vec_x.push_back(*(px+i));
-        vec_y.push_back(*(pyv+i));
-        vec_z.push_back(*(pz+i));
-        vec_ux.push_back(*(ux+i));
-        vec_uy.push_back(*(uy+i));
-        vec_uz.push_back(*(uz+i));
-    }
-
-    //pybind11::scoped_interpreter guard{};
-    //auto plt = matplotlibcpp17::pyplot::import();
-    //matplotlibcpp17::mplot3d::import();
-//
-    //auto fig = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(10, 7)));
-    //auto ax = fig.add_subplot(Args(), Kwargs("projection"_a = "3d"));
-    //ax.plot(Args(vec_z, vec_y, vec_x), Kwargs("color"_a = "green", "linewidth"_a = 2.0));
-    //ax.quiver(Args(vec_z, vec_y, vec_x, vec_uz, vec_uy, vec_ux),
-    //            Kwargs("linewidth"_a = 1, "length"_a = 30, "normalize"_a = true, "color"_a = "red"));
-    //ax.set_xlim(Args(-500, 500));
-    //ax.set_ylim(Args(-500, 500));
-    //ax.set_xlabel(Args("X"));
-    //ax.set_ylabel(Args("Y")); 
-    //ax.set_zlabel(Args("Z"));
-//
-//
-    //plt.show();
-
-    GFOLDThrustProfile profile = solver.compute_thrust_profile();
 
     // ---- plot ----
     py::scoped_interpreter guard{};\
@@ -97,9 +74,9 @@ int main()
 
     auto ax1 = fig.add_subplot(Args(2, 1, 1));
     ax1.plot(Args(profile.t, profile.thrust_N), Kwargs("linewidth"_a = 2.0));
-    const double T_max  = cfg.T_max;
-    ax1.plot(Args(profile.t, std::vector<double>(profile.t.size(), T_max * cfg.throttle_max)), Kwargs("linestyle"_a="--"));
-    ax1.plot(Args(profile.t, std::vector<double>(profile.t.size(), T_max * cfg.throttle_min)), Kwargs("linestyle"_a="--"));
+    const double T_max  = plot_cfg.T_max;
+    ax1.plot(Args(profile.t, std::vector<double>(profile.t.size(), T_max * plot_cfg.throttle_max)), Kwargs("linestyle"_a="--"));
+    ax1.plot(Args(profile.t, std::vector<double>(profile.t.size(), T_max * plot_cfg.throttle_min)), Kwargs("linestyle"_a="--"));
     ax1.set_title(Args("Thrust (N)"));
     ax1.grid(Args(true));
 
