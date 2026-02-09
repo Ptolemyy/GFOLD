@@ -9,7 +9,7 @@ SET THROT2 TO 0.8.        // max throttle fraction
 SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
-SET RECOMPUTE_TIME TO 0.5.  // seconds between recompute triggers
+SET RECOMPUTE_TIME TO 0.6.  // seconds between recompute triggers
 SET LAST_RECOMPUTE_TIME TO 0.
 
 SET DEG2RAD TO CONSTANT:PI / 180.
@@ -177,9 +177,9 @@ FUNCTION SEND_MODE1_STATE {
                 ROUND(VN,2) + "," +
                 ROUND(VU,2) + "," +
                 ROUND(SPEED,2) + "," +
-                ROUND(THRUST_MAX,1) + "," +
-                ROUND(ISP_CUR,1) + "," +
-                ROUND(MASS_WET,1) + "," +
+                ROUND(THRUST_MAX,3) + "," +
+                ROUND(ISP_CUR,3) + "," +
+                ROUND(MASS_WET,3) + "," +
                 ROUND(THROT1,2) + "," +
                 ROUND(THROT2,2) + "," +
                 ROUND(THETA_DEG,1) + "," +
@@ -316,9 +316,9 @@ SET OUT_LINE TO MODE + "," +
                ROUND(VN,2) + "," +
                ROUND(VU,2) + "," +
                ROUND(SPEED,2) + "," +
-               ROUND(THRUST_MAX,1) + "," +
-               ROUND(ISP_CUR,1) + "," +
-               ROUND(MASS_WET,1) + "," +
+               ROUND(THRUST_MAX,3) + "," +
+               ROUND(ISP_CUR,3) + "," +
+               ROUND(MASS_WET,3) + "," +
                ROUND(THROT1,2) + "," +
                ROUND(THROT2,2) + "," +
                ROUND(THETA_DEG,1) + "," +
@@ -355,7 +355,7 @@ FUNCTION MAIN_TICK {
   }.
 
   // Periodic recompute trigger based on elapsed time.
-  IF RECOMPUTE_ENABLED = 1 AND RECOMPUTE_PENDING = 0 AND (ELAPSED_SEC + RECOMPUTE_TIME) > LAST_RECOMPUTE_TIME {
+  IF RECOMPUTE_ENABLED = 1 AND RECOMPUTE_PENDING = 0 AND (ELAPSED_SEC - LAST_RECOMPUTE_TIME) >= RECOMPUTE_TIME {
     PRINT "RECOMPUTE_TRIGGER t=" + ROUND(ELAPSED_SEC,2).
     SEND_MODE1_STATE().
     SET RECOMPUTE_PENDING TO 1.
@@ -388,7 +388,7 @@ FUNCTION MAIN_TICK {
   SET ERR_M TO SQRT(EAST_M * EAST_M + NORTH_M * NORTH_M).
   PRINT "t=" + ROUND(ELAPSED_SEC,2) +
         " err=" + ROUND(ERR_M,1) +
-        " throttle=" + LAST_THR_CMD + 
+        " u=" + LAST_U_UP +
         " mass=" + ROUND(SHIP:MASS,3).
 
   READ_SOLVER_OUTPUT().

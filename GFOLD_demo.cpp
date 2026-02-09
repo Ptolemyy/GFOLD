@@ -135,7 +135,6 @@ static int closest_prior_index(const TrajectoryCache& traj, const double r0[3]) 
             best_idx = i;
         }
     }
-    if (best_idx > 0) best_idx -= 1;
     return best_idx;
 }
 
