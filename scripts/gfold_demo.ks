@@ -35,14 +35,12 @@ SET ALT0 TO LATLNG(LAT0, LON0):TERRAINHEIGHT.
 //   - PC solver writes results to receive.txt.
 // receive.txt can contain:
 //   (A) Request-only: "COMPUTE_FINISH,1" -> ask us to send mode1 config.
-//   (B) Full profile: COMPUTE_FINISH + many U lines (mag,yaw,pitch,t_abs) + DT -> update U_LIST.
+//   (B) Full profile: COMPUTE_FINISH + many U lines (up,north,east,t_abs) -> update U_LIST.
 // Explicitly use Archive volume paths to match PC-side writes.
 SET SEND_FILE TO "0:/send.txt".
 SET RECV_FILE TO "0:/receive.txt".
 SET MODE TO 0.               // 0 = initial solve, 1 = mode1 recompute
-SET COMPUTE_FINISH TO 0.     // handshake flag from solver
-SET DT_MODE1 TO 0.           // per-index time step for U_LIST
-SET U_LIST TO LIST().        // each entry: [u_mag,yaw_deg,pitch_deg,t_abs]
+SET U_LIST TO LIST().        // each entry: [u_up,u_north,u_east,t_abs]
 SET CR TO CHAR(13).
 SET LF TO CHAR(10).
 // Fixed loop time step for pacing; elapsed time uses TIME:SECONDS.
@@ -52,55 +50,103 @@ SET TIME0_SEC TO TIME:SECONDS.
 SET ELAPSED_SEC TO 0.        // global time since script start
 SET LOOP_INDEX TO 0.
 SET LAST_THR_CMD TO 0.0.       // last throttle command (0..1)
-SET LAST_U_UP TO 0.          // last U magnitude (m/s^2)
-SET LAST_U_NORTH TO 0.       // last heading (deg)
-SET LAST_U_EAST TO 0.        // last pitch (deg)
-SET ATM_AT TO 1.0.
-SET HAS_CUR_U TO 0.          // whether we have a valid U to apply
-SET NEXT_RECOMPUTE TO 0.     // next absolute time (ELAPSED_SEC) to request recompute
+SET STEER_CMD TO PFRAME_TO_XYZ(V(0,0,1), GET_LH_ENU_AXES(BODY:POSITION:NORMALIZED)). // last steering command vector
 SET RECOMPUTE_PENDING TO 0.  // recompute requested but not answered yet
 SET HAS_U_LIST TO 0.         // whether U_LIST is valid
 SET U_START_TIME TO 0.       // time origin for U selection
 SET U_TF TO 0.               // total time span for U_LIST
 SET U_T0 TO 0.               // first absolute t from solver
 SET LAST_TICK TO TIME:SECONDS.
+SET LAST_U_TICK TO 0.
 SET RUN_ACTIVE TO 1.
+
+// Build a world-space vector from local ENU components using heading().
 
 // On start, clear send.txt if it exists
 IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
 // Also clear stale receive.txt to avoid running old/invalid commands
 IF EXISTS(RECV_FILE) { DELETEPATH(RECV_FILE). }.
 
+// Build ENU basis vectors (up, north, east) from a position vector.
+FUNCTION GET_LH_ENU_AXES {
+  PARAMETER R0.
+
+  LOCAL UP_SIDE IS R0:NORMALIZED.              // z'
+  LOCAL NORTH_POLE IS BODY:NORTH:VECTOR.
+
+  // 右手叉乘得到 EAST
+  LOCAL EAST_SIDE IS VCRS(NORTH_POLE, UP_SIDE).
+
+  // 极点退化保护（可选，但很推荐）
+  IF EAST_SIDE:MAG < 1E-8 {
+    // 如果 UP 几乎与 NORTH_POLE 平行，换一个参考轴避免 EAST 为零
+    LOCAL REF IS V(1,0,0).
+    LOCAL EAST_SIDE IS VCRS(REF, UP_SIDE).
+  }
+  SET EAST_SIDE TO EAST_SIDE:NORMALIZED.       // x'
+
+  LOCAL NORTH_SIDE IS VCRS(UP_SIDE, EAST_SIDE):NORMALIZED. // 这是“右手北”
+
+  // 左手系修正：把 y' 取为 -NORTH_SIDE
+  LOCAL Y_SIDE IS NORTH_SIDE.               // y'
+  LOCAL X_SIDE IS EAST_SIDE.                   // x'
+  LOCAL Z_SIDE IS -UP_SIDE.                     // z'
+
+  RETURN LIST(X_SIDE, Y_SIDE, Z_SIDE).
+}
+
+FUNCTION XYZ_TO_PFRAME {
+  PARAMETER VXYZ, AXES.
+  // AXES = LIST(X_SIDE, Y_SIDE, Z_SIDE)
+
+  LOCAL X_SIDE IS AXES[0].
+  LOCAL Y_SIDE IS AXES[1].
+  LOCAL Z_SIDE IS AXES[2].
+
+  LOCAL VX_P IS VDOT(VXYZ, X_SIDE).
+  LOCAL VY_P IS VDOT(VXYZ, Y_SIDE).
+  LOCAL VZ_P IS VDOT(VXYZ, Z_SIDE).
+
+  RETURN V(VX_P, VY_P, VZ_P).
+}
+FUNCTION PFRAME_TO_XYZ {
+  PARAMETER VP, AXES.
+  // VP = V(vx', vy', vz')
+  // AXES = LIST(X_SIDE, Y_SIDE, Z_SIDE)
+
+  LOCAL X_SIDE IS AXES[0].
+  LOCAL Y_SIDE IS AXES[1].
+  LOCAL Z_SIDE IS AXES[2].
+
+  LOCAL VXYZ IS (X_SIDE * VP:X) + (Y_SIDE * VP:Y) + (Z_SIDE * VP:Z).
+  RETURN VXYZ.
+}
+
 // ===== Helper to compute ENU + velocity/state =====
 // Build ENU state and vehicle parameters for solver input.
 // ENU origin = target lat/lon + terrain height at target.
 // Units: meters, m/s, N, s, kg.
 FUNCTION CALC_STATE {
-  LOCAL CUR_LAT IS SHIP:LATITUDE.
-  LOCAL CUR_LON IS SHIP:LONGITUDE.
-  LOCAL CUR_ALT IS SHIP:ALTITUDE.
+  SET rp TO BODY:GEOPOSITIONLATLNG(LAT0,LON0):POSITION.
+  SET r0 TO BODY:position:normalized.
 
-  LOCAL DLON_DEG IS CUR_LON - LON0.
-  IF DLON_DEG > 180 { SET DLON_DEG TO DLON_DEG - 360. }.
-  IF DLON_DEG < -180 { SET DLON_DEG TO DLON_DEG + 360. }.
+  LOCAL enu_axes IS GET_LH_ENU_AXES(r0).
+  LOCAL up_side IS enu_axes[0].
+  LOCAL north_side IS enu_axes[1].
+  LOCAL east_side IS enu_axes[2].
+  
+  SET M TO XYZ_TO_PFRAME(-rp, enu_axes).
+  SET EAST_M TO M:x.
+  SET NORTH_M TO M:y.
+  SET UP_M TO M:z.
 
-  LOCAL DLAT IS (CUR_LAT - LAT0) * DEG2RAD.
-  LOCAL DLON IS DLON_DEG * DEG2RAD.
+  SET vel TO SHIP:VELOCITY:SURFACE.
+  SET vel_P TO XYZ_TO_PFRAME(vel, enu_axes).
 
-  LOCAL LAT0_RAD IS LAT0 * DEG2RAD.
-  LOCAL RE IS KERBIN_R + ALT0.
-
-  LOCAL NORTH_M IS DLAT * RE.
-  LOCAL EAST_M  IS DLON * RE * COS(LAT0_RAD).
-  LOCAL UP_M    IS CUR_ALT - ALT0.
-
-  LOCAL SPEED IS SHIP:VELOCITY:SURFACE:MAG.
-  LOCAL VH IS SHIP:GROUNDSPEED.
-  LOCAL VU IS SHIP:VERTICALSPEED.
-
-  LOCAL HDG IS SHIP:HEADING * DEG2RAD.
-  LOCAL VN IS VH * COS(HDG).
-  LOCAL VE IS VH * SIN(HDG).
+  LOCAL VU IS vel_P:z.
+  LOCAL VN IS vel_P:y.
+  LOCAL VE IS vel_P:x.
+  LOCAL mag_vel IS SQRT(VE * VE + VN * VN + VU * VU).
 
   LOCAL ATM_AT IS SHIP:BODY:ATM:ALTITUDEPRESSURE(SHIP:ALTITUDE).
   LOCAL THRUST_MAX IS SHIP:AVAILABLETHRUSTAT(ATM_AT).
@@ -122,22 +168,25 @@ FUNCTION CALC_STATE {
   DATA:ADD(VE).
   DATA:ADD(VN).
   DATA:ADD(VU).
-  DATA:ADD(SPEED).
+  DATA:ADD(mag_vel).
   DATA:ADD(THRUST_MAX).
   DATA:ADD(ISP_CUR).
   DATA:ADD(MASS_WET).
   RETURN DATA.
 }
 
-// Update thrust command from precomputed direction + magnitude.
-// U magnitude is acceleration (m/s^2); throttle = |U| * mass / available_thrust.
-// Yaw/Pitch are in degrees; steering/throttle are locked outside this function.
+// Update thrust command from vector components (up, north, east).
+// Magnitude is acceleration (m/s^2); throttle = |U| * mass / available_thrust.
+// Yaw/Pitch are derived here; steering/throttle are locked outside this function.
 FUNCTION APPLY_THRUST {
-  PARAMETER U_MAG, YAW_DEG, PITCH_DEG.
-  SET LAST_U_UP TO U_MAG.
-  SET LAST_U_NORTH TO YAW_DEG.
-  SET LAST_U_EAST TO PITCH_DEG.
-  IF U_MAG <> U_MAG OR YAW_DEG <> YAW_DEG OR PITCH_DEG <> PITCH_DEG {
+  PARAMETER U_UP, U_NORTH, U_EAST.
+  SET r0 TO BODY:position:normalized.
+  LOCAL enu_axes IS GET_LH_ENU_AXES(r0).
+  
+  SET STEER_CMD TO PFRAME_TO_XYZ(V(U_EAST, U_NORTH, U_UP), enu_axes).          // 反向推力向量在世界坐标系下
+  LOCAL U_MAG IS SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
+
+  IF U_MAG <> U_MAG {
     SET LAST_THR_CMD TO 0.
     SET HAS_CUR_U TO 0.
     RETURN.
@@ -170,12 +219,12 @@ FUNCTION SEND_MODE1_STATE {
   SET MASS_WET TO STATE[9].
   SET MODE TO 1.
   SET OUT_LINE TO MODE + "," +
-                ROUND(EAST_M,1) + "," +
-                ROUND(NORTH_M,1) + "," +
                 ROUND(UP_M,1) + "," +
-                ROUND(VE,2) + "," +
-                ROUND(VN,2) + "," +
+                ROUND(NORTH_M,1) + "," +
+                ROUND(EAST_M,1) + "," +
                 ROUND(VU,2) + "," +
+                ROUND(VN,2) + "," +
+                ROUND(VE,2) + "," +
                 ROUND(SPEED,2) + "," +
                 ROUND(THRUST_MAX,3) + "," +
                 ROUND(ISP_CUR,3) + "," +
@@ -217,11 +266,11 @@ FUNCTION READ_SOLVER_OUTPUT {
         IF PARTS[0] = "COMPUTE_FINISH" AND PARTS[1]:STARTSWITH("1") {
           SET HAS_FINISH TO 1.
         } ELSE IF PARTS[0] = "U" AND PARTS:LENGTH >= 5 {
-          SET U_MAG TO PARTS[1]:TONUMBER.
-          SET U_YAW TO PARTS[2]:TONUMBER.
-          SET U_PITCH TO PARTS[3]:TONUMBER.
+          SET U_UP TO PARTS[1]:TONUMBER.
+          SET U_NORTH TO PARTS[2]:TONUMBER.
+          SET U_EAST TO PARTS[3]:TONUMBER.
           SET U_T TO PARTS[4]:TONUMBER.
-          NEW_U_LIST:ADD(LIST(U_MAG, U_YAW, U_PITCH, U_T)).
+          NEW_U_LIST:ADD(LIST(U_UP, U_NORTH, U_EAST, U_T)).
           SET U_COUNT TO U_COUNT + 1.
         }.
       }.
@@ -281,10 +330,11 @@ FUNCTION SELECT_U {
   IF idx < 0 { SET idx TO 0. }.
   IF idx >= U_LIST:LENGTH { SET idx TO U_LIST:LENGTH - 1. }.
   LOCAL U_CUR IS U_LIST[idx].
-  SET LAST_U_UP TO U_CUR[0].
-  SET LAST_U_NORTH TO U_CUR[1].
-  SET LAST_U_EAST TO U_CUR[2].
-  IF U_CUR[0] = 0 {
+  LOCAL U_UP IS U_CUR[0].
+  LOCAL U_NORTH IS U_CUR[1].
+  LOCAL U_EAST IS U_CUR[2].
+  LOCAL U_MAG IS SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
+  IF U_MAG <= 0 {
     SET LAST_THR_CMD TO 0.
     SET HAS_CUR_U TO 0.
     SET RUN_ACTIVE TO 0.
@@ -292,7 +342,7 @@ FUNCTION SELECT_U {
     PRINT "PROGRAM_END".
     RETURN.
   }.
-  APPLY_THRUST(U_CUR[0], U_CUR[1], U_CUR[2]).
+  APPLY_THRUST(U_UP, U_NORTH, U_EAST).
 }
 
 // ===== Single-shot mode0 compute and write =====
@@ -309,12 +359,12 @@ SET ISP_CUR TO STATE[8].
 SET MASS_WET TO STATE[9].
 
 SET OUT_LINE TO MODE + "," +
-               ROUND(EAST_M,1) + "," +
-               ROUND(NORTH_M,1) + "," +
                ROUND(UP_M,1) + "," +
-               ROUND(VE,2) + "," +
-               ROUND(VN,2) + "," +
+               ROUND(NORTH_M,1) + "," +
+               ROUND(EAST_M,1) + "," +
                ROUND(VU,2) + "," +
+               ROUND(VN,2) + "," +
+               ROUND(VE,2) + "," +
                ROUND(SPEED,2) + "," +
                ROUND(THRUST_MAX,3) + "," +
                ROUND(ISP_CUR,3) + "," +
@@ -362,21 +412,6 @@ FUNCTION MAIN_TICK {
     SET LAST_RECOMPUTE_TIME TO ELAPSED_SEC.
   }.
 
-  IF HAS_U_LIST = 1 {
-    SELECT_U().
-    IF RUN_ACTIVE = 0 { RETURN. }.
-  }.
-
-  // Lock steering/throttle externally each tick.
-  IF HAS_CUR_U = 1 {
-    LOCK STEERING TO HEADING(LAST_U_NORTH, LAST_U_EAST).
-    LOCK THROTTLE TO MIN(THROT2, MAX(
-      LAST_U_UP * SHIP:MASS / SHIP:AVAILABLETHRUSTAT(SHIP:BODY:ATM:ALTITUDEPRESSURE(SHIP:ALTITUDE)),
-      0)).
-  } ELSE {
-    LOCK THROTTLE TO 0.
-  }.
-
   SET LOOP_INDEX TO LOOP_INDEX + 1.
 
   // Telemetry output for debugging (horizontal error, thrust, mass).
@@ -386,21 +421,38 @@ FUNCTION MAIN_TICK {
   SET NORTH_M TO STATE[1].
   SET UP_M TO STATE[2].
   SET ERR_M TO SQRT(EAST_M * EAST_M + NORTH_M * NORTH_M).
+//  LOCAL U_MAG IS SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
   PRINT "t=" + ROUND(ELAPSED_SEC,2) +
         " err=" + ROUND(ERR_M,1) +
-        " u=" + LAST_U_UP +
+        //" u=" + ROUND(U_MAG,2) +
         " mass=" + ROUND(SHIP:MASS,3).
 
   READ_SOLVER_OUTPUT().
 }
 
+// ===== Thruster/steering tick (same cadence as MAIN_TICK) =====
+FUNCTION U_TICK {
+  IF RUN_ACTIVE = 0 { RETURN. }.
+  SET NOW_SEC TO TIME:SECONDS.
+  SET ELAPSED_SEC TO NOW_SEC - TIME0_SEC.
+  IF HAS_U_LIST = 1 {
+    SELECT_U().
+  }.
+}
+
 // ===== Schedule tick via WHEN =====
 SET LAST_TICK TO TIME:SECONDS.
+SET LAST_U_TICK TO TIME:SECONDS.
 LOCK THROTTLE TO LAST_THR_CMD.
-LOCK STEERING TO HEADING(LAST_U_NORTH, LAST_U_EAST).
+LOCK STEERING TO STEER_CMD.
 WHEN TIME:SECONDS > LAST_TICK + LOOP_DT THEN {
   SET LAST_TICK TO TIME:SECONDS.
   MAIN_TICK().
+  PRESERVE.
+}.
+WHEN TIME:SECONDS > LAST_U_TICK + LOOP_DT THEN {
+  SET LAST_U_TICK TO TIME:SECONDS.
+  U_TICK().
   PRESERVE.
 }.
 WAIT UNTIL FALSE.

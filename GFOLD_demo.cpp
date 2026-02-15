@@ -85,13 +85,13 @@ static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDC
     // [11]=THROT1, [12]=THROT2, [13]=THETA_DEG, [14]=YGS_DEG, [15]=ELAPSED_SEC
     try {
         // Solver assumes x-axis is altitude. Map ENU accordingly:
-        cfg.r0[0] = std::stod(tok[3]); // U -> x (altitude)
+        cfg.r0[0] = std::stod(tok[1]); // U -> x (altitude)
         cfg.r0[1] = std::stod(tok[2]); // N -> y
-        cfg.r0[2] = std::stod(tok[1]); // E -> z
+        cfg.r0[2] = std::stod(tok[3]); // E -> z
 
-        cfg.v0[0] = std::stod(tok[6]); // VU -> vx
+        cfg.v0[0] = std::stod(tok[4]); // VU -> vx
         cfg.v0[1] = std::stod(tok[5]); // VN -> vy
-        cfg.v0[2] = std::stod(tok[4]); // VE -> vz
+        cfg.v0[2] = std::stod(tok[6]); // VE -> vz
 
         cfg.T_max = std::stod(tok[8]) * 1000.0;   // kN -> N
         cfg.Isp   = std::stod(tok[9]);            // s
@@ -177,6 +177,20 @@ int main() {
                 continue;
             }
 
+            std::cout << std::fixed << std::setprecision(6);
+            std::cout << "[mode0] cfg tf=" << cfg.tf
+                      << " g0=" << cfg.g0
+                      << " Isp=" << cfg.Isp
+                      << " T_max=" << cfg.T_max
+                      << " throt=[" << cfg.throttle_min << "," << cfg.throttle_max << "]"
+                      << " m0=" << cfg.m0
+                      << " r0=[" << cfg.r0[0] << "," << cfg.r0[1] << "," << cfg.r0[2] << "]"
+                      << " v0=[" << cfg.v0[0] << "," << cfg.v0[1] << "," << cfg.v0[2] << "]"
+                      << " glide=" << cfg.glide_slope_deg
+                      << " theta=" << cfg.max_angle_deg
+                      << " steps=" << cfg.steps
+                      << "\n";
+
             const double L = 10.0, R = 90.0;
             SearchResult res = find_best_tf(cfg, L, R, 20);
 
@@ -186,7 +200,7 @@ int main() {
             }
 
             has_best_tf = true;
-            best_tf = res.best_tf + 5.0;
+            best_tf = res.best_tf;
             last_traj.valid = false;
 
             std::cout << "[mode0] best_tf=" << res.best_tf
@@ -260,35 +274,32 @@ int main() {
             int recv_lines = 0;
             oss << "COMPUTE_FINISH,1\n";
             recv_lines += 1;
-            const double rad2deg = 180.0 / std::acos(-1.0);
             double last_t_abs = base_time;
             const int max_lines = 10;
+            int lines_emitted = 0;
             for (int i = 0; i < steps && i < max_lines; ++i) {
                 const double up = ux[i];
                 const double north = uy[i];
                 const double east = uz[i];
-                const double mag = std::sqrt(up * up + north * north + east * east);
-                const double horiz = std::sqrt(north * north + east * east);
-                double yaw_deg = 0.0;
-                if (horiz > 0.0) {
-                    yaw_deg = std::atan2(east, north) * rad2deg;
-                    if (yaw_deg < 0.0) yaw_deg += 360.0;
-                }
-                const double pitch_deg = std::atan2(up, horiz) * rad2deg;
                 const double t_abs = base_time + (static_cast<double>(i) * dt);
                 last_t_abs = t_abs;
-                std::cout << "[mode1] U[" << i << "] mag=" << mag
-                          << " yaw=" << yaw_deg
-                          << " pitch=" << pitch_deg
+                const double mag = std::sqrt(up * up + north * north + east * east);
+                std::cout << "[mode1] U[" << i << "] up=" << up
+                          << " north=" << north
+                          << " east=" << east
+                          << " mag=" << mag
                           << " t=" << t_abs << "\n";
-                oss << "U," << mag << "," << yaw_deg << "," << pitch_deg << "," << t_abs << "\n";
+                oss << "U," << up << "," << north << "," << east << "," << t_abs << "\n";
                 recv_lines += 1;
+                lines_emitted += 1;
             }
             // Append a zero-magnitude thrust command to signal end.
+            if (lines_emitted == 0) {
+                // ensure t_abs is defined even if no U lines were emitted
+                last_t_abs = base_time;
+            }
             const double end_t = last_t_abs + dt;
-            oss << "U," << 0.0 << "," << 0.0 << "," << 90.0 << "," << end_t << "\n";
-            recv_lines += 1;
-            oss << "DT," << dt << "\n";
+            oss << "U," << 0.0 << "," << 0.0 << "," << 0.0 << "," << end_t << "\n";
             recv_lines += 1;
             if (!atomic_write(recv_path, oss.str())) {
                 std::cerr << "Failed to write receive.txt\n";
