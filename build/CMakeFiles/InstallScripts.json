@@ -1,9 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"C:/Users/32796/Desktop/GFOLD/build/cmake_install.cmake",
-		"C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver_100/c/cmake_install.cmake",
-		"C:/Users/32796/Desktop/GFOLD/build/p4_cpg_solver_100/c/solver_code/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
