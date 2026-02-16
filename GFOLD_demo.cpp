@@ -138,6 +138,18 @@ static int closest_prior_index(const TrajectoryCache& traj, const double r0[3]) 
     return best_idx;
 }
 
+static std::vector<int> build_sample_indices(int steps, int gap, int max_count) {
+    std::vector<int> indices;
+    indices.reserve(max_count);
+    const int stride = gap + 1;
+    for (int i = 0; i < max_count; ++i) {
+        const int idx = i * stride;
+        if (idx >= steps) break;
+        indices.push_back(idx);
+    }
+    return indices;
+}
+
 int main() {
     // Adjust this path to your KSP Scripts folder if needed.
     const fs::path send_path =
@@ -155,6 +167,10 @@ int main() {
     bool has_best_tf = false;
     double best_tf = 0.0;
     TrajectoryCache last_traj;
+    const std::vector<int> sample_gaps = {0, 1, 3, 4, 9};
+    size_t sample_gap_mode = 0;
+    constexpr int max_lines = 10;
+    constexpr double recompute_time = 1.5;
 
     while (true) {
         std::this_thread::sleep_for(20ms);
@@ -202,6 +218,7 @@ int main() {
             has_best_tf = true;
             best_tf = res.best_tf;
             last_traj.valid = false;
+            sample_gap_mode = 0;
 
             std::cout << "[mode0] best_tf=" << res.best_tf
                       << " best_m=" << res.best_m
@@ -275,16 +292,39 @@ int main() {
             oss << "COMPUTE_FINISH,1\n";
             recv_lines += 1;
             double last_t_abs = base_time;
-            const int max_lines = 10;
+            auto emit_indices = build_sample_indices(steps, sample_gaps[sample_gap_mode], max_lines);
+            double tf_needed = 0.0;
+            if (emit_indices.size() >= 2) {
+                const int first_idx = emit_indices.front();
+                const int last_idx = emit_indices.back();
+                tf_needed = static_cast<double>(last_idx - first_idx) * dt;
+            }
+
+            while (tf_needed < recompute_time && (sample_gap_mode + 1) < sample_gaps.size()) {
+                sample_gap_mode += 1;
+                emit_indices = build_sample_indices(steps, sample_gaps[sample_gap_mode], max_lines);
+                if (emit_indices.size() >= 2) {
+                    const int first_idx = emit_indices.front();
+                    const int last_idx = emit_indices.back();
+                    tf_needed = static_cast<double>(last_idx - first_idx) * dt;
+                } else {
+                    tf_needed = 0.0;
+                }
+            }
+
+            std::cout << "[mode1] sample_gap=" << sample_gaps[sample_gap_mode]
+                      << " tf_needed=" << tf_needed
+                      << " recompute_time=" << recompute_time << "\n";
+
             int lines_emitted = 0;
-            for (int i = 0; i < steps && i < max_lines; ++i) {
-                const double up = ux[i];
-                const double north = uy[i];
-                const double east = uz[i];
-                const double t_abs = base_time + (static_cast<double>(i) * dt);
+            for (int idx : emit_indices) {
+                const double up = ux[idx];
+                const double north = uy[idx];
+                const double east = uz[idx];
+                const double t_abs = base_time + (static_cast<double>(idx) * dt);
                 last_t_abs = t_abs;
                 const double mag = std::sqrt(up * up + north * north + east * east);
-                std::cout << "[mode1] U[" << i << "] up=" << up
+                std::cout << "[mode1] U[" << idx << "] up=" << up
                           << " north=" << north
                           << " east=" << east
                           << " mag=" << mag

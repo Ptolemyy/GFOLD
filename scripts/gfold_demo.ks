@@ -9,7 +9,7 @@ SET THROT2 TO 0.8.        // max throttle fraction
 SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
-SET RECOMPUTE_TIME TO 0.6.  // seconds between recompute triggers
+SET RECOMPUTE_TIME TO 1.5.  // seconds between recompute triggers
 SET LAST_RECOMPUTE_TIME TO 0.
 
 SET DEG2RAD TO CONSTANT:PI / 180.

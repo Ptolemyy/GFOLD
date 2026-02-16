@@ -16,59 +16,43 @@ namespace py = pybind11;
 
 int main()
 {
-    const int built_N = GFOLD_CPG_N; // passed via CMake target_compile_definitions
-    std::vector<int> test_Ns = {100, 75, 50, 25, 10};
+    // Problem setup (single N consistent with generated solver)
+    GFOLDConfig cfg;
+    cfg.steps = 100;
+    cfg.tf = 46.96;
+    cfg.g0 = 3.71;
+    cfg.Isp = 2000.0/3.71;
+    cfg.T_max = 24000.0;
+    cfg.throttle_min = 0.2;
+    cfg.throttle_max = 0.8;
+    cfg.m0 = 2000.0;
+    cfg.r0[0] = 2400.000000;
+    cfg.r0[1] = 450.00;
+    cfg.r0[2] = -330.0;
+    cfg.v0[0] = -10.0;
+    cfg.v0[1] = -40.0;
+    cfg.v0[2] = 10.0;
+    cfg.glide_slope_deg = 30.0;
+    cfg.max_angle_deg = 90.0;
 
-    GFOLDThrustProfile profile; // keep the one we plot (N=100 expected)
-    GFOLDConfig plot_cfg{};     // capture cfg used for the plotted profile
-    
-    for (int N : test_Ns) {
-        if (N != built_N) {
-            std::cout << "[main] Skip N=" << N
-                      << " (rebuild with -DGFOLD_CPG_N=" << N << " to benchmark)\n";
-            continue;
-        }
+    GFOLDSolver solver(cfg);
 
-        // Problem setup
-        GFOLDConfig cfg;
-        cfg.steps = N;
-        cfg.tf = 31.726;
-        cfg.g0 = 9.81;
-        cfg.Isp = 262.9;
-        cfg.T_max = 176400.0;
-        cfg.throttle_min = 0.2;
-        cfg.throttle_max = 0.8;
-        cfg.m0 = 5400.0;
-        cfg.r0[0] = 1379.700000;
-        cfg.r0[1] = -6.300;
-        cfg.r0[2] = -5.100;
-        cfg.v0[0] = -7.38;
-        cfg.v0[1] = 0.0;
-        cfg.v0[2] = 0.0;
-        cfg.glide_slope_deg = 30.0;
-        cfg.max_angle_deg = 45.0;
+    auto start = std::chrono::steady_clock::now();
+    const bool ok = solver.solve();
+    auto end = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "[main] N=" << cfg.steps << " solve time: " << duration.count() << " ms\n";
 
-        GFOLDSolver solver(cfg);
-
-        auto start = std::chrono::steady_clock::now();
-        const bool ok = solver.solve();
-        auto end = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        std::cout << "[main] N=" << N << " solve time: " << duration.count() << " ms\n";
-
-        if (!ok) {
-            std::cout << "Infeasible for N=" << N << "\n";
-            continue;
-        }
-
-        if (N == 100) {
-            profile = solver.compute_thrust_profile();
-            plot_cfg = solver.config(); // capture cfg for plotting bounds
-        }
+    if (!ok) {
+        std::cout << "Infeasible for N=" << cfg.steps << "\n";
+        return 1;
     }
 
+    GFOLDThrustProfile profile = solver.compute_thrust_profile();
+    GFOLDConfig plot_cfg = solver.config(); // capture cfg for plotting bounds
+
     // ---- plot ----
-    py::scoped_interpreter guard{};\
+    py::scoped_interpreter guard{};
     auto plt = matplotlibcpp17::pyplot::import();
     auto fig = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(10, 6)));
 

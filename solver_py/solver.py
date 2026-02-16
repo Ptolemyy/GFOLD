@@ -228,10 +228,9 @@ if __name__ == '__main__':
     if _args.gen:
         solver_p3.generate_code(code_dir="p3_cpg_solver")
         _strip_m_link_guard("p3_cpg_solver")
-        for n in [100, 75, 50, 25, 10]:
-            solver_p4_n = LCvxSolver(problem_type='p4', N_override=n)
-            solver_p4_n.generate_code(code_dir=f"p4_cpg_solver_{n}")
-            _strip_m_link_guard(f"p4_cpg_solver_{n}")
+        solver_p4_n = LCvxSolver(problem_type='p4', N_override=100)
+        solver_p4_n.generate_code(code_dir=f"p4_cpg_solver")
+        _strip_m_link_guard(f"p4_cpg_solver")
     elif _args.plot:
         print("Plotting results...")
         solver_p4 = LCvxSolver(problem_type='p4')
