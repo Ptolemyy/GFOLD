@@ -1,6 +1,0 @@
-{
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "cmake.configureArgs": [
-        "-DCMAKE_PREFIX_PATH=C:/libs/pybind11;C:/libs/matplotlibcpp17",
-    ]
-}
