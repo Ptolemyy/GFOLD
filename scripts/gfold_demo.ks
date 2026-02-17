@@ -52,6 +52,8 @@ SET LOOP_DT TO 0.05.
 SET TIME0_SEC TO TIME:SECONDS.
 SET ELAPSED_SEC TO 0.        // global time since script start
 SET LOOP_INDEX TO 0.
+SET SPEED TO 0.
+SET U_MAG TO 0.
 SET LAST_THR_CMD TO 0.0.       // last throttle command (0..1)
 SET STEER_CMD TO PFRAME_TO_XYZ(V(0,0,1), GET_LH_ENU_AXES(BODY:POSITION:NORMALIZED)). // last steering command vector
 SET RECOMPUTE_PENDING TO 0.  // recompute requested but not answered yet
@@ -61,6 +63,7 @@ SET U_TF TO 0.               // total time span for U_LIST
 SET U_T0 TO 0.               // first absolute t from solver
 SET LAST_TICK TO TIME:SECONDS.
 SET LAST_U_TICK TO 0.
+SET LAST_PRINT_TICK TO 0.
 SET RUN_ACTIVE TO 1.
 SET GEAR_DEPLOYED TO 0.      // one-shot landing gear deploy latch
 
@@ -247,7 +250,7 @@ FUNCTION SEND_MODE1_STATE {
   SET f TO OPEN(SEND_FILE).
   f:CLEAR().
   f:WRITELN(OUT_LINE).
-  PRINT "SEND MODE1: " + OUT_LINE.
+//  PRINT "SEND MODE1: " + OUT_LINE.
 }
 
 // Read solver output from receive.txt and refresh U_LIST if complete.
@@ -291,13 +294,13 @@ FUNCTION READ_SOLVER_OUTPUT {
   }.
   SET t_loop_end_ms TO ROUND(TIME:SECONDS * 1000, 0).
   SET loop_ms TO t_loop_end_ms - t_loop_start_ms.
-  PRINT "recv_lines loop(ms)=" + loop_ms + " lines=" + RECV_LINES:LENGTH.
+//  PRINT "recv_lines loop(ms)=" + loop_ms + " lines=" + RECV_LINES:LENGTH.
 
   IF HAS_FINISH = 1 {
     IF FINISH_CODE = 2 {
       SET RECOMPUTE_ENABLED TO 0.
       SET RECOMPUTE_PENDING TO 0.
-      PRINT "RECOMPUTE_DISABLED_BY_PC".
+//      PRINT "RECOMPUTE_DISABLED_BY_PC".
       SET rf2 TO OPEN(RECV_FILE).
       rf2:CLEAR().
       DELETEPATH(RECV_FILE).
@@ -319,8 +322,8 @@ FUNCTION READ_SOLVER_OUTPUT {
       } ELSE {
         SET U_TF TO LOOP_DT.
       }.
-      PRINT "U_LIST updated: len=" + U_LIST:LENGTH + " tf=" + U_TF.
-      PRINT "TF_10_LINES=" + U_TF.
+//      PRINT "U_LIST updated: len=" + U_LIST:LENGTH + " tf=" + U_TF.
+//      PRINT "TF_10_LINES=" + U_TF.
     }.
     SET RECOMPUTE_PENDING TO 0.
     IF NEW_VALID = 1 {
@@ -355,14 +358,16 @@ FUNCTION SELECT_U {
   LOCAL U_UP IS U_CUR[0].
   LOCAL U_NORTH IS U_CUR[1].
   LOCAL U_EAST IS U_CUR[2].
-  LOCAL U_MAG IS SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
+  SET U_MAG TO SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
   IF U_MAG <= 0 {
     SET LAST_THR_CMD TO 0.
     SET HAS_CUR_U TO 0.
+    SET U_MAG TO 0.
     SET RUN_ACTIVE TO 0.
-    PRINT "U_ZERO_STOP".
+//    PRINT "U_ZERO_STOP".
     SET STEER_CMD TO PFRAME_TO_XYZ(V(0,0,1), GET_LH_ENU_AXES(BODY:POSITION:NORMALIZED)).
-    PRINT "PROGRAM_END".
+    LOCK STEERING TO STEER_CMD.
+//    PRINT "PROGRAM_END".
     RETURN.
   }.
   APPLY_THRUST(U_UP, U_NORTH, U_EAST).
@@ -402,7 +407,7 @@ IF NOT EXISTS(SEND_FILE) { CREATE(SEND_FILE). }.
 SET f TO OPEN(SEND_FILE).
 f:CLEAR().
 f:WRITELN(OUT_LINE).
-PRINT "SEND MODE0: " + OUT_LINE.
+//PRINT "SEND MODE0: " + OUT_LINE.
 
 // ===== Wait for initial mode0 response =====
 // Block until PC creates receive.txt (mode0 done). Then delete it and continue.
@@ -413,7 +418,7 @@ SET RF0_LINE TO OPEN(RECV_FILE):READALL:STRING.
 IF RF0_LINE:CONTAINS("COMPUTE_FINISH,2") {
   SET RECOMPUTE_ENABLED TO 0.
   SET RECOMPUTE_PENDING TO 0.
-  PRINT "RECOMPUTE_DISABLED_BY_PC_INIT".
+//  PRINT "RECOMPUTE_DISABLED_BY_PC_INIT".
 }.
 SET rf0 TO OPEN(RECV_FILE).
 rf0:CLEAR().
@@ -433,6 +438,7 @@ FUNCTION MAIN_TICK {
   SET EAST_M TO STATE[0].
   SET NORTH_M TO STATE[1].
   SET UP_M TO STATE[2].
+  SET SPEED TO STATE[6].
 
   IF UP_M < CUTDOWN_ALTITUDE {
     SET LAST_THR_CMD TO 0.
@@ -441,8 +447,8 @@ FUNCTION MAIN_TICK {
     SET RECOMPUTE_ENABLED TO 0.
     SET RECOMPUTE_PENDING TO 0.
     SET RUN_ACTIVE TO 0.
-    PRINT "CUTDOWN_TRIGGER up=" + ROUND(UP_M,2) + " cutoff=" + ROUND(CUTDOWN_ALTITUDE,2).
-    PRINT "PROGRAM_END".
+//    PRINT "CUTDOWN_TRIGGER up=" + ROUND(UP_M,2) + " cutoff=" + ROUND(CUTDOWN_ALTITUDE,2).
+//    PRINT "PROGRAM_END".
     SHUTDOWN.
     RETURN.
   }.
@@ -450,7 +456,7 @@ FUNCTION MAIN_TICK {
   IF GEAR_DEPLOYED = 0 AND SHIP:ALTITUDE < 600 {
     GEAR ON.
     SET GEAR_DEPLOYED TO 1.
-    PRINT "GEAR_DEPLOY alt=" + ROUND(SHIP:ALTITUDE,1).
+//    PRINT "GEAR_DEPLOY alt=" + ROUND(SHIP:ALTITUDE,1).
   }.
 
   // On first tick, send initial mode1 config.
@@ -461,7 +467,7 @@ FUNCTION MAIN_TICK {
 
   // Periodic recompute trigger based on elapsed time.
   IF RECOMPUTE_ENABLED = 1 AND RECOMPUTE_PENDING = 0 AND (ELAPSED_SEC - LAST_RECOMPUTE_TIME) >= RECOMPUTE_TIME {
-    PRINT "RECOMPUTE_TRIGGER t=" + ROUND(ELAPSED_SEC,2).
+//    PRINT "RECOMPUTE_TRIGGER t=" + ROUND(ELAPSED_SEC,2).
     SEND_MODE1_STATE().
     SET RECOMPUTE_PENDING TO 1.
     SET LAST_RECOMPUTE_TIME TO ELAPSED_SEC.
@@ -469,14 +475,12 @@ FUNCTION MAIN_TICK {
 
   SET LOOP_INDEX TO LOOP_INDEX + 1.
 
-  // Telemetry output for debugging (horizontal error, raw UP_M, mass).
+  // Telemetry values are printed by dedicated PRINT_TICK() WHEN.
   SET ERR_M TO SQRT(EAST_M * EAST_M + NORTH_M * NORTH_M).
-//  LOCAL U_MAG IS SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
-  PRINT "t=" + ROUND(ELAPSED_SEC,2) +
-        " err=" + ROUND(ERR_M,1) +
-        " up=" + ROUND(UP_M,2) +
-        " u=" + ROUND(U_MAG,2) +
-        " mass=" + ROUND(SHIP:MASS,3).
+//  PRINT "t=" + ROUND(ELAPSED_SEC,2) +
+//        " err=" + ROUND(ERR_M,1) +
+//        " up=" + ROUND(UP_M,2) +
+//        " mass=" + ROUND(SHIP:MASS,3).
 
   READ_SOLVER_OUTPUT().
 }
@@ -491,9 +495,21 @@ FUNCTION U_TICK {
   }.
 }
 
+// ===== Dedicated print tick =====
+FUNCTION PRINT_TICK {
+  CLEARSCREEN.
+  PRINT "t=" + ROUND(ELAPSED_SEC,2).
+  PRINT "err=" + ROUND(ERR_M,1).
+  PRINT "up=" + ROUND(UP_M,2).
+  PRINT "u=" + ROUND(U_MAG,2).
+  PRINT "speed=" + ROUND(SPEED,2).
+  PRINT "mass=" + ROUND(SHIP:MASS,3).
+}
+
 // ===== Schedule tick via WHEN =====
 SET LAST_TICK TO TIME:SECONDS.
 SET LAST_U_TICK TO TIME:SECONDS.
+SET LAST_PRINT_TICK TO TIME:SECONDS.
 LOCK THROTTLE TO LAST_THR_CMD.
 LOCK STEERING TO LOOKDIRUP(STEER_CMD, -BODY:NORTH:VECTOR).
 WHEN TIME:SECONDS > LAST_TICK + LOOP_DT THEN {
@@ -504,6 +520,11 @@ WHEN TIME:SECONDS > LAST_TICK + LOOP_DT THEN {
 WHEN TIME:SECONDS > LAST_U_TICK + LOOP_DT THEN {
   SET LAST_U_TICK TO TIME:SECONDS.
   U_TICK().
+  PRESERVE.
+}.
+WHEN TIME:SECONDS > LAST_PRINT_TICK + LOOP_DT THEN {
+  SET LAST_PRINT_TICK TO TIME:SECONDS.
+  PRINT_TICK().
   PRESERVE.
 }.
 WAIT UNTIL FALSE.
