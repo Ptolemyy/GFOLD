@@ -16,6 +16,9 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
     auto t0 = clock::now();
 
     SearchResult res;
+    constexpr double kThrottleSwitchTf = 5.0;
+    constexpr double kThrottleMaxShortTf = 1.0;
+    constexpr double kGlideSlopeShortTfDeg = 90.0;
 
     GFOLDSolver solver(cfg_in);
     const int steps = cfg_in.steps;
@@ -24,6 +27,8 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
         res.solve_calls++;
         GFOLDConfig trial = cfg_in;
         trial.tf = x;
+        trial.throttle_max = (x < kThrottleSwitchTf) ? kThrottleMaxShortTf : cfg_in.throttle_max;
+        trial.glide_slope_deg = (x < kThrottleSwitchTf) ? kGlideSlopeShortTfDeg : cfg_in.glide_slope_deg;
         solver.set_config(trial);
         if (!solver.solve()) return -std::numeric_limits<double>::infinity(); // infeasible
 

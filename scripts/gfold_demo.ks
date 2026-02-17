@@ -8,6 +8,8 @@ SET THROT1 TO 0.2.        // min throttle fraction
 SET THROT2 TO 0.8.        // max throttle fraction
 SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
+SET UP_BIAS_M TO -3.5.       // altitude bias added to reported UP_M in mode0/mode1
+SET CUTDOWN_ALTITUDE TO 2.0. // hard engine cutoff altitude using raw UP_M (no bias)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
 SET RECOMPUTE_TIME TO 1.5.  // seconds between recompute triggers
 SET LAST_RECOMPUTE_TIME TO 0.
@@ -36,6 +38,7 @@ SET ALT0 TO LATLNG(LAT0, LON0):TERRAINHEIGHT.
 // receive.txt can contain:
 //   (A) Request-only: "COMPUTE_FINISH,1" -> ask us to send mode1 config.
 //   (B) Full profile: COMPUTE_FINISH + many U lines (up,north,east,t_abs) -> update U_LIST.
+//   (C) "COMPUTE_FINISH,2" -> infeasible/no usable profile, disable recompute.
 // Explicitly use Archive volume paths to match PC-side writes.
 SET SEND_FILE TO "0:/send.txt".
 SET RECV_FILE TO "0:/receive.txt".
@@ -59,6 +62,7 @@ SET U_T0 TO 0.               // first absolute t from solver
 SET LAST_TICK TO TIME:SECONDS.
 SET LAST_U_TICK TO 0.
 SET RUN_ACTIVE TO 1.
+SET GEAR_DEPLOYED TO 0.      // one-shot landing gear deploy latch
 
 // Build a world-space vector from local ENU components using heading().
 
@@ -66,6 +70,11 @@ SET RUN_ACTIVE TO 1.
 IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
 // Also clear stale receive.txt to avoid running old/invalid commands
 IF EXISTS(RECV_FILE) { DELETEPATH(RECV_FILE). }.
+
+// Startup vehicle mode setup requested by flight procedure.
+STAGE.
+RCS ON.
+SAS OFF.
 
 // Build ENU basis vectors (up, north, east) from a position vector.
 FUNCTION GET_LH_ENU_AXES {
@@ -198,7 +207,6 @@ FUNCTION APPLY_THRUST {
     RETURN.
   }.
   LOCAL THR_CMD IS U_MAG * SHIP:MASS / (THRUST_AVAIL).
-  SET THR_CMD TO MIN(THROT2, MAX(THR_CMD, 0)).
   SET LAST_THR_CMD TO THR_CMD.
   SET HAS_CUR_U TO 1.
 }
@@ -219,7 +227,7 @@ FUNCTION SEND_MODE1_STATE {
   SET MASS_WET TO STATE[9].
   SET MODE TO 1.
   SET OUT_LINE TO MODE + "," +
-                ROUND(UP_M,1) + "," +
+                ROUND(UP_M + UP_BIAS_M,1) + "," +
                 ROUND(NORTH_M,1) + "," +
                 ROUND(EAST_M,1) + "," +
                 ROUND(VU,2) + "," +
@@ -253,6 +261,7 @@ FUNCTION READ_SOLVER_OUTPUT {
 
   SET COMPUTE_FINISH TO 0.
   SET HAS_FINISH TO 0.
+  SET FINISH_CODE TO 0.
   SET U_COUNT TO 0.
   SET NEW_U_LIST TO LIST().
 
@@ -265,6 +274,10 @@ FUNCTION READ_SOLVER_OUTPUT {
       IF PARTS:LENGTH >= 2 {
         IF PARTS[0] = "COMPUTE_FINISH" AND PARTS[1]:STARTSWITH("1") {
           SET HAS_FINISH TO 1.
+          SET FINISH_CODE TO 1.
+        } ELSE IF PARTS[0] = "COMPUTE_FINISH" AND PARTS[1]:STARTSWITH("2") {
+          SET HAS_FINISH TO 1.
+          SET FINISH_CODE TO 2.
         } ELSE IF PARTS[0] = "U" AND PARTS:LENGTH >= 5 {
           SET U_UP TO PARTS[1]:TONUMBER.
           SET U_NORTH TO PARTS[2]:TONUMBER.
@@ -281,6 +294,15 @@ FUNCTION READ_SOLVER_OUTPUT {
   PRINT "recv_lines loop(ms)=" + loop_ms + " lines=" + RECV_LINES:LENGTH.
 
   IF HAS_FINISH = 1 {
+    IF FINISH_CODE = 2 {
+      SET RECOMPUTE_ENABLED TO 0.
+      SET RECOMPUTE_PENDING TO 0.
+      PRINT "RECOMPUTE_DISABLED_BY_PC".
+      SET rf2 TO OPEN(RECV_FILE).
+      rf2:CLEAR().
+      DELETEPATH(RECV_FILE).
+      RETURN.
+    }.
     SET NEW_VALID TO 0.
     IF U_COUNT > 0 { SET NEW_VALID TO 1. }.
     IF NEW_VALID = 1 {
@@ -359,7 +381,7 @@ SET ISP_CUR TO STATE[8].
 SET MASS_WET TO STATE[9].
 
 SET OUT_LINE TO MODE + "," +
-               ROUND(UP_M,1) + "," +
+               ROUND(UP_M + UP_BIAS_M,1) + "," +
                ROUND(NORTH_M,1) + "," +
                ROUND(EAST_M,1) + "," +
                ROUND(VU,2) + "," +
@@ -386,6 +408,12 @@ PRINT "SEND MODE0: " + OUT_LINE.
 UNTIL EXISTS(RECV_FILE) {
   WAIT 0.
 }.
+SET RF0_LINE TO OPEN(RECV_FILE):READALL:STRING.
+IF RF0_LINE:CONTAINS("COMPUTE_FINISH,2") {
+  SET RECOMPUTE_ENABLED TO 0.
+  SET RECOMPUTE_PENDING TO 0.
+  PRINT "RECOMPUTE_DISABLED_BY_PC_INIT".
+}.
 SET rf0 TO OPEN(RECV_FILE).
 rf0:CLEAR().
 DELETEPATH(RECV_FILE).
@@ -398,8 +426,34 @@ FUNCTION MAIN_TICK {
   IF RUN_ACTIVE = 0 { RETURN. }.
   SET NOW_SEC TO TIME:SECONDS.
   SET ELAPSED_SEC TO NOW_SEC - TIME0_SEC.
+
+  // Read raw state once per tick; UP_M here is un-biased.
+  SET STATE TO CALC_STATE().
+  SET EAST_M TO STATE[0].
+  SET NORTH_M TO STATE[1].
+  SET UP_M TO STATE[2].
+
+  IF UP_M < CUTDOWN_ALTITUDE {
+    SET LAST_THR_CMD TO 0.
+    SET HAS_CUR_U TO 0.
+    SET HAS_U_LIST TO 0.
+    SET RECOMPUTE_ENABLED TO 0.
+    SET RECOMPUTE_PENDING TO 0.
+    SET RUN_ACTIVE TO 0.
+    PRINT "CUTDOWN_TRIGGER up=" + ROUND(UP_M,2) + " cutoff=" + ROUND(CUTDOWN_ALTITUDE,2).
+    PRINT "PROGRAM_END".
+    SHUTDOWN.
+    RETURN.
+  }.
+
+  IF GEAR_DEPLOYED = 0 AND SHIP:ALTITUDE < 600 {
+    GEAR ON.
+    SET GEAR_DEPLOYED TO 1.
+    PRINT "GEAR_DEPLOY alt=" + ROUND(SHIP:ALTITUDE,1).
+  }.
+
   // On first tick, send initial mode1 config.
-  IF LOOP_INDEX = 0 {
+  IF LOOP_INDEX = 0 AND RECOMPUTE_ENABLED = 1 {
     SEND_MODE1_STATE().
     SET RECOMPUTE_PENDING TO 1.
   }.
@@ -414,16 +468,12 @@ FUNCTION MAIN_TICK {
 
   SET LOOP_INDEX TO LOOP_INDEX + 1.
 
-  // Telemetry output for debugging (horizontal error, thrust, mass).
-  SET ATM_AT TO SHIP:BODY:ATM:ALTITUDEPRESSURE(SHIP:ALTITUDE).
-  SET STATE TO CALC_STATE().
-  SET EAST_M TO STATE[0].
-  SET NORTH_M TO STATE[1].
-  SET UP_M TO STATE[2].
+  // Telemetry output for debugging (horizontal error, raw UP_M, mass).
   SET ERR_M TO SQRT(EAST_M * EAST_M + NORTH_M * NORTH_M).
 //  LOCAL U_MAG IS SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
   PRINT "t=" + ROUND(ELAPSED_SEC,2) +
         " err=" + ROUND(ERR_M,1) +
+        " up_raw=" + ROUND(UP_M,2) +
         //" u=" + ROUND(U_MAG,2) +
         " mass=" + ROUND(SHIP:MASS,3).
 

@@ -194,27 +194,27 @@ int main()
     // Problem setup: copy from main.cpp
     GFOLDConfig cfg;
     cfg.steps = 100;
-    cfg.tf = 30.154781;
-    cfg.g0 = 3.71;
-    cfg.Isp = 2000/3.71;
-    cfg.T_max = 24000.0;
-    cfg.throttle_min = 0.2;
-    cfg.throttle_max = 0.8;
-    cfg.m0 = 2000.0;
-    cfg.r0[0] = 2400.0;
-    cfg.r0[1] = 450.00;
-    cfg.r0[2] = -330.00;
-    cfg.v0[0] = -10.00;
-    cfg.v0[1] = -40.0;
-    cfg.v0[2] = 10.0;
-    cfg.glide_slope_deg = 30.0;
+    cfg.tf = 3.109300;
+    cfg.g0 = 9.81;
+    cfg.Isp = 251.992;
+    cfg.T_max = 169307.0;
+    cfg.throttle_min = 0.1;
+    cfg.throttle_max = 1.0;
+    cfg.m0 = 4986.0;
+    cfg.r0[0] = 38.800000;
+    cfg.r0[1] = -0.300000;
+    cfg.r0[2] = 8.700000;
+    cfg.v0[0] = -19.960000;
+    cfg.v0[1] = -0.490000;
+    cfg.v0[2] = -0.600000;
+    cfg.glide_slope_deg = 90.0;
     cfg.max_angle_deg = 90.0;
 
     GFOLDSolver solver(cfg);
 
-    const double tf_min  = 10.0;
-    const double tf_max  = 100.0;
-    const double tf_step = 0.5;
+    const double tf_min  = 0.0;
+    const double tf_max  = 30.0;
+    const double tf_step = 0.1;
 
     Bracket br = coarse_bracket(solver, cfg, tf_min, tf_max, tf_step);
     if (br.ms.empty()) {

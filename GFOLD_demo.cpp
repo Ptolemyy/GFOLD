@@ -78,6 +78,14 @@ static bool atomic_write(const fs::path& p, const std::string& content) {
     return !ec;
 }
 
+static void write_compute_finish(const fs::path& recv_path, int status_code) {
+    std::ostringstream oss;
+    oss << "COMPUTE_FINISH," << status_code << "\n";
+    if (!atomic_write(recv_path, oss.str())) {
+        std::cerr << "Failed to write receive.txt\n";
+    }
+}
+
 static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDConfig& cfg, double* base_time_out) {
     // Expect at least: MODE,E,N,U,VE,VN,VU,SPEED,THRUST_MAX,ISP,MASS_WET
     if (tok.size() < 11) return false;
@@ -115,6 +123,9 @@ static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDC
 struct TrajectoryCache {
     int steps = 0;
     double tf = 0.0;
+    std::vector<double> ux;
+    std::vector<double> uy;
+    std::vector<double> uz;
     std::vector<double> rx;
     std::vector<double> ry;
     std::vector<double> rz;
@@ -150,6 +161,30 @@ static std::vector<int> build_sample_indices(int steps, int gap, int max_count) 
     return indices;
 }
 
+static void apply_tf_rules(
+    GFOLDConfig& cfg,
+    double nominal_throttle_max,
+    double nominal_glide_slope_deg) {
+    cfg.throttle_max = (cfg.tf < 5.0) ? 1.0 : nominal_throttle_max;
+    cfg.glide_slope_deg = (cfg.tf < 5.0) ? 90.0 : nominal_glide_slope_deg;
+}
+
+static void log_mode1_cfg(const GFOLDConfig& cfg) {
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "[mode1] cfg tf=" << cfg.tf
+              << " g0=" << cfg.g0
+              << " Isp=" << cfg.Isp
+              << " T_max=" << cfg.T_max
+              << " throt=[" << cfg.throttle_min << "," << cfg.throttle_max << "]"
+              << " m0=" << cfg.m0
+              << " r0=[" << cfg.r0[0] << "," << cfg.r0[1] << "," << cfg.r0[2] << "]"
+              << " v0=[" << cfg.v0[0] << "," << cfg.v0[1] << "," << cfg.v0[2] << "]"
+              << " glide=" << cfg.glide_slope_deg
+              << " theta=" << cfg.max_angle_deg
+              << " steps=" << cfg.steps
+              << "\n";
+}
+
 int main() {
     // Adjust this path to your KSP Scripts folder if needed.
     const fs::path send_path =
@@ -166,11 +201,14 @@ int main() {
 
     bool has_best_tf = false;
     double best_tf = 0.0;
+    bool fallback_enabled = true;
+    bool mode1_solver_enabled = true;
     TrajectoryCache last_traj;
     const std::vector<int> sample_gaps = {0, 1, 3, 4, 9};
     size_t sample_gap_mode = 0;
     constexpr int max_lines = 10;
-    constexpr double recompute_time = 1.5;
+    constexpr double recompute_time = 1.5+0.3;
+    constexpr double t_bias = 0.1;
 
     while (true) {
         std::this_thread::sleep_for(20ms);
@@ -212,11 +250,14 @@ int main() {
 
             if (!res.feasible) {
                 std::cout << "[mode0] infeasible in [" << L << ", " << R << "]\n";
+                write_compute_finish(recv_path, 2);
                 continue;
             }
 
             has_best_tf = true;
             best_tf = res.best_tf;
+            fallback_enabled = true;
+            mode1_solver_enabled = true;
             last_traj.valid = false;
             sample_gap_mode = 0;
 
@@ -227,9 +268,7 @@ int main() {
 
             // Request kOS to send fresh state as mode1 (fixed-format marker)
             {
-                if (!atomic_write(recv_path, "COMPUTE_FINISH,1\n")) {
-                    std::cerr << "Failed to write receive.txt\n";
-                }
+                write_compute_finish(recv_path, 1);
             }
         } else if (mode == 1 && has_best_tf) {
             // Populate cfg from current state, reuse best_tf
@@ -248,43 +287,155 @@ int main() {
                 const double rem_tf = dt_prev * static_cast<double>(last_traj.steps - idx);
                 if (rem_tf > 0.0) cfg.tf = rem_tf;
             }
+            const double nominal_throttle_max = cfg.throttle_max;
+            const double nominal_glide_slope_deg = cfg.glide_slope_deg;
+            apply_tf_rules(cfg, nominal_throttle_max, nominal_glide_slope_deg);
+            log_mode1_cfg(cfg);
 
-            std::cout << std::fixed << std::setprecision(6);
-            std::cout << "[mode1] cfg tf=" << cfg.tf
-                      << " g0=" << cfg.g0
-                      << " Isp=" << cfg.Isp
-                      << " T_max=" << cfg.T_max
-                      << " throt=[" << cfg.throttle_min << "," << cfg.throttle_max << "]"
-                      << " m0=" << cfg.m0
-                      << " r0=[" << cfg.r0[0] << "," << cfg.r0[1] << "," << cfg.r0[2] << "]"
-                      << " v0=[" << cfg.v0[0] << "," << cfg.v0[1] << "," << cfg.v0[2] << "]"
-                      << " glide=" << cfg.glide_slope_deg
-                      << " theta=" << cfg.max_angle_deg
-                      << " steps=" << cfg.steps
-                      << "\n";
+            bool ok = false;
+            TrajectoryCache active_traj;
+            if (mode1_solver_enabled) {
+                GFOLDSolver solver(cfg);
+                ok = solver.solve();
+                if (!ok) {
+                    if (fallback_enabled) {
+                        const double tf_min = cfg.tf;
+                        const double tf_max = cfg.tf + 3.5;
+                        std::cout << "[mode1] solve failed at tf=" << cfg.tf
+                                  << ", fallback search in [" << tf_min << ", " << tf_max << "]\n";
 
-            GFOLDSolver solver(cfg);
-            bool ok = solver.solve();
-            if (!ok) {
-                std::cerr << "[mode1] solve failed\n";
+                        GFOLDConfig search_cfg = cfg;
+                        search_cfg.throttle_max = nominal_throttle_max;
+                        search_cfg.glide_slope_deg = nominal_glide_slope_deg;
+                        SearchResult retry = find_best_tf(search_cfg, tf_min, tf_max, 4);
+                        if (!retry.feasible) {
+                            const bool gap_is_9 =
+                                sample_gap_mode < sample_gaps.size() &&
+                                sample_gaps[sample_gap_mode] == 9;
+                            if (gap_is_9) {
+                                fallback_enabled = false;
+                                mode1_solver_enabled = false;
+                                std::cerr << "[mode1] fallback infeasible with max gap="
+                                          << sample_gaps[sample_gap_mode]
+                                          << ", return COMPUTE_FINISH,2\n";
+                                write_compute_finish(recv_path, 2);
+                                continue;
+                            }
+                            fallback_enabled = false;
+                            mode1_solver_enabled = false;
+                            std::cerr << "[mode1] fallback find_best_tf infeasible in ["
+                                      << tf_min << ", " << tf_max
+                                      << "], disable fallback and solver, reuse last trajectory\n";
+                        } else {
+                            cfg.tf = retry.best_tf;
+                            apply_tf_rules(cfg, nominal_throttle_max, nominal_glide_slope_deg);
+                            log_mode1_cfg(cfg);
+                            best_tf = retry.best_tf;
+                            solver.set_config(cfg);
+                            ok = solver.solve();
+                            if (!ok) {
+                                fallback_enabled = false;
+                                mode1_solver_enabled = false;
+                                std::cerr << "[mode1] fallback solve failed, status="
+                                          << solver.status() << " tf=" << cfg.tf
+                                          << ", disable fallback and solver, reuse last trajectory\n";
+                            } else {
+                                std::cout << "[mode1] fallback best_tf=" << retry.best_tf
+                                          << " best_m=" << retry.best_m
+                                          << " solves=" << retry.solve_calls
+                                          << " time=" << retry.elapsed_sec << "s\n";
+                            }
+                        }
+                    } else {
+                        mode1_solver_enabled = false;
+                        std::cout << "[mode1] solve failed at tf=" << cfg.tf
+                                  << ", fallback disabled, disable solver and reuse last trajectory\n";
+                    }
+                }
+            } else {
+                std::cout << "[mode1] solver disabled, reuse last trajectory\n";
+            }
+
+            if (ok) {
+                const int steps = cfg.steps;
+                double* ux = CPG_Result.prim->u;
+                double* uy = CPG_Result.prim->u + steps;
+                double* uz = CPG_Result.prim->u + 2 * steps;
+                double* rx = CPG_Result.prim->r;
+                double* ry = CPG_Result.prim->r + steps;
+                double* rz = CPG_Result.prim->r + 2 * steps;
+
+                active_traj.steps = steps;
+                active_traj.tf = cfg.tf;
+                active_traj.ux.assign(ux, ux + steps);
+                active_traj.uy.assign(uy, uy + steps);
+                active_traj.uz.assign(uz, uz + steps);
+                active_traj.rx.assign(rx, rx + steps);
+                active_traj.ry.assign(ry, ry + steps);
+                active_traj.rz.assign(rz, rz + steps);
+                active_traj.valid = true;
+            } else {
+                const bool cache_ready =
+                    last_traj.valid &&
+                    last_traj.steps > 0 &&
+                    last_traj.tf > 0.0 &&
+                    static_cast<int>(last_traj.ux.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.uy.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.uz.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.rx.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.ry.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.rz.size()) == last_traj.steps;
+
+                if (!cache_ready) {
+                    std::cerr << "[mode1] fallback failed and no valid cached trajectory\n";
+                    write_compute_finish(recv_path, 2);
+                    continue;
+                }
+
+                const int start_idx = closest_prior_index(last_traj, cfg.r0);
+                if (start_idx < 0 || start_idx >= last_traj.steps) {
+                    std::cerr << "[mode1] invalid cached start_idx=" << start_idx << "\n";
+                    write_compute_finish(recv_path, 2);
+                    continue;
+                }
+
+                const int rem_steps = last_traj.steps - start_idx;
+                if (rem_steps <= 0) {
+                    std::cerr << "[mode1] cached trajectory has no remaining steps\n";
+                    write_compute_finish(recv_path, 2);
+                    continue;
+                }
+
+                const double dt_prev = last_traj.tf / static_cast<double>(last_traj.steps);
+                active_traj.steps = rem_steps;
+                active_traj.tf = dt_prev * static_cast<double>(rem_steps);
+                active_traj.ux.assign(last_traj.ux.begin() + start_idx, last_traj.ux.end());
+                active_traj.uy.assign(last_traj.uy.begin() + start_idx, last_traj.uy.end());
+                active_traj.uz.assign(last_traj.uz.begin() + start_idx, last_traj.uz.end());
+                active_traj.rx.assign(last_traj.rx.begin() + start_idx, last_traj.rx.end());
+                active_traj.ry.assign(last_traj.ry.begin() + start_idx, last_traj.ry.end());
+                active_traj.rz.assign(last_traj.rz.begin() + start_idx, last_traj.rz.end());
+                active_traj.valid = true;
+
+                cfg.tf = active_traj.tf;
+                std::cout << "[mode1] reuse cached trajectory from idx=" << start_idx
+                          << " rem_steps=" << rem_steps
+                          << " tf=" << active_traj.tf << "\n";
+            }
+
+            if (!active_traj.valid || active_traj.steps <= 0) {
+                std::cerr << "[mode1] no active trajectory to emit\n";
+                write_compute_finish(recv_path, 2);
                 continue;
             }
 
-            const int steps = cfg.steps;
-            const double dt = cfg.tf / static_cast<double>(steps);
-            double* ux = CPG_Result.prim->u;
-            double* uy = CPG_Result.prim->u + steps;
-            double* uz = CPG_Result.prim->u + 2 * steps;
-            double* rx = CPG_Result.prim->r;
-            double* ry = CPG_Result.prim->r + steps;
-            double* rz = CPG_Result.prim->r + 2 * steps;
+            last_traj = active_traj;
 
-            last_traj.steps = steps;
-            last_traj.tf = cfg.tf;
-            last_traj.rx.assign(rx, rx + steps);
-            last_traj.ry.assign(ry, ry + steps);
-            last_traj.rz.assign(rz, rz + steps);
-            last_traj.valid = true;
+            const int steps = active_traj.steps;
+            const double dt = active_traj.tf / static_cast<double>(steps);
+            const std::vector<double>& ux = active_traj.ux;
+            const std::vector<double>& uy = active_traj.uy;
+            const std::vector<double>& uz = active_traj.uz;
 
             std::ostringstream oss;
             oss << std::setprecision(10) << std::fixed;
@@ -322,14 +473,15 @@ int main() {
                 const double north = uy[idx];
                 const double east = uz[idx];
                 const double t_abs = base_time + (static_cast<double>(idx) * dt);
+                const double t_out = t_abs - t_bias;
                 last_t_abs = t_abs;
                 const double mag = std::sqrt(up * up + north * north + east * east);
                 std::cout << "[mode1] U[" << idx << "] up=" << up
                           << " north=" << north
                           << " east=" << east
                           << " mag=" << mag
-                          << " t=" << t_abs << "\n";
-                oss << "U," << up << "," << north << "," << east << "," << t_abs << "\n";
+                          << " t=" << t_out << "\n";
+                oss << "U," << up << "," << north << "," << east << "," << t_out << "\n";
                 recv_lines += 1;
                 lines_emitted += 1;
             }
@@ -339,7 +491,8 @@ int main() {
                 last_t_abs = base_time;
             }
             const double end_t = last_t_abs + dt;
-            oss << "U," << 0.0 << "," << 0.0 << "," << 0.0 << "," << end_t << "\n";
+            const double end_t_out = end_t - t_bias;
+            oss << "U," << 0.0 << "," << 0.0 << "," << 0.0 << "," << end_t_out << "\n";
             recv_lines += 1;
             if (!atomic_write(recv_path, oss.str())) {
                 std::cerr << "Failed to write receive.txt\n";

@@ -66,8 +66,9 @@ bool GFOLDSolver::solve() {
 
     cpg_solve();
 
-    if (CPG_Result.info->status != 0) {
-        std::cerr << "Solver status: " << CPG_Result.info->status << " (non-zero)\n";
+    const int st = CPG_Result.info ? CPG_Result.info->status : -999;
+    if (st != 0 && st != 10) {
+        std::cerr << "Solver status: " << st << " (treated as infeasible)\n";
         return false;
     }
     return true;
