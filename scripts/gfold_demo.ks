@@ -8,7 +8,7 @@ SET THROT1 TO 0.2.        // min throttle fraction
 SET THROT2 TO 0.8.        // max throttle fraction
 SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
-SET UP_BIAS_M TO -3.5.       // altitude bias added to reported UP_M in mode0/mode1
+SET UP_BIAS_M TO -10.       // altitude bias added to reported UP_M in mode0/mode1
 SET CUTDOWN_ALTITUDE TO 2.0. // hard engine cutoff altitude using raw UP_M (no bias)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
 SET RECOMPUTE_TIME TO 1.5.  // seconds between recompute triggers
@@ -361,6 +361,7 @@ FUNCTION SELECT_U {
     SET HAS_CUR_U TO 0.
     SET RUN_ACTIVE TO 0.
     PRINT "U_ZERO_STOP".
+    SET STEER_CMD TO PFRAME_TO_XYZ(V(0,0,1), GET_LH_ENU_AXES(BODY:POSITION:NORMALIZED)).
     PRINT "PROGRAM_END".
     RETURN.
   }.
@@ -473,8 +474,8 @@ FUNCTION MAIN_TICK {
 //  LOCAL U_MAG IS SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
   PRINT "t=" + ROUND(ELAPSED_SEC,2) +
         " err=" + ROUND(ERR_M,1) +
-        " up_raw=" + ROUND(UP_M,2) +
-        //" u=" + ROUND(U_MAG,2) +
+        " up=" + ROUND(UP_M,2) +
+        " u=" + ROUND(U_MAG,2) +
         " mass=" + ROUND(SHIP:MASS,3).
 
   READ_SOLVER_OUTPUT().
@@ -494,7 +495,7 @@ FUNCTION U_TICK {
 SET LAST_TICK TO TIME:SECONDS.
 SET LAST_U_TICK TO TIME:SECONDS.
 LOCK THROTTLE TO LAST_THR_CMD.
-LOCK STEERING TO STEER_CMD.
+LOCK STEERING TO LOOKDIRUP(STEER_CMD, -BODY:NORTH:VECTOR).
 WHEN TIME:SECONDS > LAST_TICK + LOOP_DT THEN {
   SET LAST_TICK TO TIME:SECONDS.
   MAIN_TICK().

@@ -208,7 +208,6 @@ int main() {
     size_t sample_gap_mode = 0;
     constexpr int max_lines = 10;
     constexpr double recompute_time = 1.5+0.3;
-    constexpr double t_bias = 0.1;
 
     while (true) {
         std::this_thread::sleep_for(20ms);
@@ -300,7 +299,7 @@ int main() {
                 if (!ok) {
                     if (fallback_enabled) {
                         const double tf_min = cfg.tf;
-                        const double tf_max = cfg.tf + 3.5;
+                        const double tf_max = cfg.tf + 1.5;
                         std::cout << "[mode1] solve failed at tf=" << cfg.tf
                                   << ", fallback search in [" << tf_min << ", " << tf_max << "]\n";
 
@@ -473,7 +472,7 @@ int main() {
                 const double north = uy[idx];
                 const double east = uz[idx];
                 const double t_abs = base_time + (static_cast<double>(idx) * dt);
-                const double t_out = t_abs - t_bias;
+                const double t_out = t_abs;
                 last_t_abs = t_abs;
                 const double mag = std::sqrt(up * up + north * north + east * east);
                 std::cout << "[mode1] U[" << idx << "] up=" << up
@@ -491,7 +490,7 @@ int main() {
                 last_t_abs = base_time;
             }
             const double end_t = last_t_abs + dt;
-            const double end_t_out = end_t - t_bias;
+            const double end_t_out = end_t;
             oss << "U," << 0.0 << "," << 0.0 << "," << 0.0 << "," << end_t_out << "\n";
             recv_lines += 1;
             if (!atomic_write(recv_path, oss.str())) {

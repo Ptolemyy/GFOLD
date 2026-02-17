@@ -194,21 +194,21 @@ int main()
     // Problem setup: copy from main.cpp
     GFOLDConfig cfg;
     cfg.steps = 100;
-    cfg.tf = 3.109300;
+    cfg.tf = 3.494359;
     cfg.g0 = 9.81;
-    cfg.Isp = 251.992;
-    cfg.T_max = 169307.0;
-    cfg.throttle_min = 0.1;
+    cfg.Isp = 252.231;
+    cfg.T_max = 169467.0;
+    cfg.throttle_min = 0.3;
     cfg.throttle_max = 1.0;
-    cfg.m0 = 4986.0;
-    cfg.r0[0] = 38.800000;
-    cfg.r0[1] = -0.300000;
-    cfg.r0[2] = 8.700000;
-    cfg.v0[0] = -19.960000;
-    cfg.v0[1] = -0.490000;
-    cfg.v0[2] = -0.600000;
+    cfg.m0 = 5082.0;
+    cfg.r0[0] = 70.000000;
+    cfg.r0[1] = 1.800000;
+    cfg.r0[2] = 35.200000;
+    cfg.v0[0] = -27.620000;
+    cfg.v0[1] = -0.920000;
+    cfg.v0[2] = -14.010000;
     cfg.glide_slope_deg = 90.0;
-    cfg.max_angle_deg = 90.0;
+    cfg.max_angle_deg = 20.0;
 
     GFOLDSolver solver(cfg);
 
