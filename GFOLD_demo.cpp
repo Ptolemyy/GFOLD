@@ -201,6 +201,8 @@ int main() {
 
     bool has_best_tf = false;
     double best_tf = 0.0;
+    bool has_mode0_best_m = false;
+    double mode0_best_m = 0.0;
     bool fallback_enabled = true;
     bool mode1_solver_enabled = true;
     TrajectoryCache last_traj;
@@ -255,6 +257,8 @@ int main() {
 
             has_best_tf = true;
             best_tf = res.best_tf;
+            mode0_best_m = res.best_m;
+            has_mode0_best_m = true;
             fallback_enabled = true;
             mode1_solver_enabled = true;
             last_traj.valid = false;
@@ -485,9 +489,11 @@ int main() {
             std::cout << std::flush;
 
             std::cout << std::fixed << std::setprecision(6);
+            const double best_m_to_print = has_mode0_best_m ? mode0_best_m : 0.0;
             std::cout << "[mode1] solver=" << solver_state
                       << " fallback=" << fallback_state
-                      << " remaining_tf=" << active_traj.tf << "\n";
+                      << " remaining_tf=" << active_traj.tf
+                      << " best_m=" << best_m_to_print << "\n";
 
             int lines_emitted = 0;
             for (int idx : emit_indices) {
@@ -515,6 +521,8 @@ int main() {
             const double end_t = last_t_abs + dt;
             const double end_t_out = end_t;
             oss << "U," << 0.0 << "," << 0.0 << "," << 0.0 << "," << end_t_out << "\n";
+            recv_lines += 1;
+            oss << "REMAIN_TF," << active_traj.tf << "\n";
             recv_lines += 1;
             if (!atomic_write(recv_path, oss.str())) {
 //                std::cerr << "Failed to write receive.txt\n";

@@ -8,11 +8,12 @@ SET THROT1 TO 0.2.        // min throttle fraction
 SET THROT2 TO 0.8.        // max throttle fraction
 SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
-SET UP_BIAS_M TO -8.       // altitude bias added to reported UP_M in mode0/mode1
+SET UP_BIAS_M TO -4.       // altitude bias added to reported UP_M in mode0/mode1
 SET CUTDOWN_ALTITUDE TO 2.0. // hard engine cutoff altitude using raw UP_M (no bias)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
 SET RECOMPUTE_TIME TO 1.5.  // seconds between recompute triggers
 SET LAST_RECOMPUTE_TIME TO 0.
+SET DEPLOY_GEAR_TIME TO 8.0. // deploy gear when remain_tf <= this value
 
 SET DEG2RAD TO CONSTANT:PI / 180.
 
@@ -42,6 +43,7 @@ SET ALT0 TO LATLNG(LAT0, LON0):TERRAINHEIGHT.
 //   (A) Request-only: "COMPUTE_FINISH,1" -> ask us to send mode1 config.
 //   (B) Full profile: COMPUTE_FINISH + many U lines (up,north,east,t_abs) -> update U_LIST.
 //   (C) "COMPUTE_FINISH,2" -> infeasible/no usable profile, disable recompute.
+//   (D) "REMAIN_TF,<seconds>" -> remaining trajectory time from CPP.
 // Explicitly use Archive volume paths to match PC-side writes.
 SET SEND_FILE TO "0:/send.txt".
 SET RECV_FILE TO "0:/receive.txt".
@@ -65,6 +67,7 @@ SET HAS_U_LIST TO 0.         // whether U_LIST is valid
 SET U_START_TIME TO 0.       // time origin for U selection
 SET U_TF TO 0.               // total time span for U_LIST
 SET U_T0 TO 0.               // first absolute t from solver
+SET REMAIN_TF TO -1.         // remain tf from cpp; -1 means unknown
 SET LAST_TICK TO TIME:SECONDS.
 SET LAST_U_TICK TO 0.
 SET LAST_PRINT_TICK TO 0.
@@ -220,6 +223,17 @@ FUNCTION APPLY_THRUST {
   SET HAS_CUR_U TO 1.
 }
 
+FUNCTION TRIGGER_U_ZERO {
+  SET LAST_THR_CMD TO 0.
+  SET HAS_CUR_U TO 0.
+  SET U_MAG TO 0.
+  SET RUN_ACTIVE TO 0.
+  SET STEER_CMD TO PFRAME_TO_XYZ(V(0,0,1), GET_LH_ENU_AXES(BODY:POSITION:NORMALIZED)).
+  LOCK STEERING TO STEER_CMD.
+  WAIT 3.
+  RCS OFF.
+}
+
 // Send current state to PC for a fresh mode1 solve (recompute).
 // This writes a single CSV line to send.txt in the same format as mode0.
 FUNCTION SEND_MODE1_STATE {
@@ -273,6 +287,8 @@ FUNCTION READ_SOLVER_OUTPUT {
   SET FINISH_CODE TO 0.
   SET U_COUNT TO 0.
   SET NEW_U_LIST TO LIST().
+  SET HAS_NEW_REMAIN_TF TO 0.
+  SET NEW_REMAIN_TF TO REMAIN_TF.
 
   SET RECV_LINE TO RECV_LINE:REPLACE(CR, "").
   SET RECV_LINES TO RECV_LINE:SPLIT(LF).
@@ -294,6 +310,9 @@ FUNCTION READ_SOLVER_OUTPUT {
           SET U_T TO PARTS[4]:TONUMBER.
           NEW_U_LIST:ADD(LIST(U_UP, U_NORTH, U_EAST, U_T)).
           SET U_COUNT TO U_COUNT + 1.
+        } ELSE IF PARTS[0] = "REMAIN_TF" AND PARTS:LENGTH >= 2 {
+          SET NEW_REMAIN_TF TO PARTS[1]:TONUMBER.
+          SET HAS_NEW_REMAIN_TF TO 1.
         }.
       }.
     }.
@@ -306,6 +325,7 @@ FUNCTION READ_SOLVER_OUTPUT {
     IF FINISH_CODE = 2 {
       SET RECOMPUTE_ENABLED TO 0.
       SET RECOMPUTE_PENDING TO 0.
+      SET REMAIN_TF TO -1.
 //      PRINT "RECOMPUTE_DISABLED_BY_PC".
       SET rf2 TO OPEN(RECV_FILE).
       rf2:CLEAR().
@@ -327,6 +347,11 @@ FUNCTION READ_SOLVER_OUTPUT {
         IF U_TF = 0 { SET U_TF TO LOOP_DT. }.
       } ELSE {
         SET U_TF TO LOOP_DT.
+      }.
+      IF HAS_NEW_REMAIN_TF = 1 {
+        SET REMAIN_TF TO NEW_REMAIN_TF.
+      } ELSE {
+        SET REMAIN_TF TO U_TF.
       }.
 //      PRINT "U_LIST updated: len=" + U_LIST:LENGTH + " tf=" + U_TF.
 //      PRINT "TF_10_LINES=" + U_TF.
@@ -366,15 +391,8 @@ FUNCTION SELECT_U {
   LOCAL U_EAST IS U_CUR[2].
   SET U_MAG TO SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
   IF U_MAG <= 0 {
-    SET LAST_THR_CMD TO 0.
-    SET HAS_CUR_U TO 0.
-    SET U_MAG TO 0.
-    SET RUN_ACTIVE TO 0.
 //    PRINT "U_ZERO_STOP".
-    SET STEER_CMD TO PFRAME_TO_XYZ(V(0,0,1), GET_LH_ENU_AXES(BODY:POSITION:NORMALIZED)).
-    LOCK STEERING TO STEER_CMD.
-    WAIT 3.
-    rcs off.
+    TRIGGER_U_ZERO().
 //    PRINT "PROGRAM_END".
     RETURN.
   }.
@@ -448,6 +466,11 @@ FUNCTION MAIN_TICK {
   SET UP_M TO STATE[2].
   SET SPEED TO STATE[6].
 
+  IF SPEED < 5 {
+    TRIGGER_U_ZERO().
+    RETURN.
+  }.
+
   IF UP_M < CUTDOWN_ALTITUDE {
     SET LAST_THR_CMD TO 0.
     SET HAS_CUR_U TO 0.
@@ -461,10 +484,10 @@ FUNCTION MAIN_TICK {
     RETURN.
   }.
 
-  IF GEAR_DEPLOYED = 0 AND SHIP:ALTITUDE < 600 {
+  IF GEAR_DEPLOYED = 0 AND REMAIN_TF >= 0 AND REMAIN_TF <= DEPLOY_GEAR_TIME {
     GEAR ON.
     SET GEAR_DEPLOYED TO 1.
-//    PRINT "GEAR_DEPLOY alt=" + ROUND(SHIP:ALTITUDE,1).
+//    PRINT "GEAR_DEPLOY remain_tf=" + ROUND(REMAIN_TF,2).
   }.
 
   // On first tick, send initial mode1 config.
@@ -512,6 +535,7 @@ FUNCTION PRINT_TICK {
   PRINT "up=" + ROUND(UP_M,2).
   PRINT "u=" + ROUND(U_MAG,2).
   PRINT "speed=" + ROUND(SPEED,2).
+  PRINT "remain_tf=" + ROUND(REMAIN_TF,3).
   PRINT "mass=" + ROUND(SHIP:MASS,3).
 }
 
