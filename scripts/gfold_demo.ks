@@ -8,7 +8,7 @@ SET THROT1 TO 0.2.        // min throttle fraction
 SET THROT2 TO 0.8.        // max throttle fraction
 SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
-SET UP_BIAS_M TO -10.       // altitude bias added to reported UP_M in mode0/mode1
+SET UP_BIAS_M TO -8.       // altitude bias added to reported UP_M in mode0/mode1
 SET CUTDOWN_ALTITUDE TO 2.0. // hard engine cutoff altitude using raw UP_M (no bias)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
 SET RECOMPUTE_TIME TO 1.5.  // seconds between recompute triggers
@@ -19,12 +19,15 @@ SET DEG2RAD TO CONSTANT:PI / 180.
 // ===== Optional config override =====
 // Provide a config.txt in the same directory with lines like:
 //   SET LAT0 TO -0.0972.
-//   SET LON0 TO -74.5577.
+//   SET LON0 TO -74.5577.  LAUNCHPAD
 //   SET ALT0 TO 0.
 //   SET THROT1 TO 0.2.
 //   SET THROT2 TO 0.8.
 //   SET THETA_DEG TO 45.
 //   SET YGS_DEG TO 30.
+
+//   SET LAT0 TO -0.09694444.
+//   SET LON0 TO -74.617. VAB
 SET CONFIG_FILE TO "config.txt".
 IF EXISTS(CONFIG_FILE) { RUNPATH(CONFIG_FILE). }.
 
@@ -48,9 +51,10 @@ SET CR TO CHAR(13).
 SET LF TO CHAR(10).
 // Fixed loop time step for pacing; elapsed time uses TIME:SECONDS.
 // ELAPSED_SEC is the single time axis for U scheduling and recompute.
-SET LOOP_DT TO 0.05.
+SET LOOP_DT TO 0.02.
 SET TIME0_SEC TO TIME:SECONDS.
 SET ELAPSED_SEC TO 0.        // global time since script start
+SET LOOP_TIME TO 0.          // main_tick loop delta
 SET LOOP_INDEX TO 0.
 SET SPEED TO 0.
 SET U_MAG TO 0.
@@ -66,6 +70,8 @@ SET LAST_U_TICK TO 0.
 SET LAST_PRINT_TICK TO 0.
 SET RUN_ACTIVE TO 1.
 SET GEAR_DEPLOYED TO 0.      // one-shot landing gear deploy latch
+
+SET CONFIG:ipu TO 2000.
 
 // Build a world-space vector from local ENU components using heading().
 
@@ -367,6 +373,8 @@ FUNCTION SELECT_U {
 //    PRINT "U_ZERO_STOP".
     SET STEER_CMD TO PFRAME_TO_XYZ(V(0,0,1), GET_LH_ENU_AXES(BODY:POSITION:NORMALIZED)).
     LOCK STEERING TO STEER_CMD.
+    WAIT 3.
+    rcs off.
 //    PRINT "PROGRAM_END".
     RETURN.
   }.
@@ -499,6 +507,7 @@ FUNCTION U_TICK {
 FUNCTION PRINT_TICK {
   CLEARSCREEN.
   PRINT "t=" + ROUND(ELAPSED_SEC,2).
+  PRINT "loop_time=" + ROUND(LOOP_TIME,4).
   PRINT "err=" + ROUND(ERR_M,1).
   PRINT "up=" + ROUND(UP_M,2).
   PRINT "u=" + ROUND(U_MAG,2).
@@ -512,17 +521,18 @@ SET LAST_U_TICK TO TIME:SECONDS.
 SET LAST_PRINT_TICK TO TIME:SECONDS.
 LOCK THROTTLE TO LAST_THR_CMD.
 LOCK STEERING TO LOOKDIRUP(STEER_CMD, -BODY:NORTH:VECTOR).
-WHEN TIME:SECONDS > LAST_TICK + LOOP_DT THEN {
+WHEN TIME:SECONDS >= LAST_TICK + LOOP_DT THEN {
   SET LAST_TICK TO TIME:SECONDS.
   MAIN_TICK().
   PRESERVE.
 }.
-WHEN TIME:SECONDS > LAST_U_TICK + LOOP_DT THEN {
+WHEN TIME:SECONDS >= LAST_U_TICK + LOOP_DT THEN {
+  SET LOOP_TIME TO TIME:SECONDS-LAST_U_TICK.
   SET LAST_U_TICK TO TIME:SECONDS.
   U_TICK().
   PRESERVE.
 }.
-WHEN TIME:SECONDS > LAST_PRINT_TICK + LOOP_DT THEN {
+WHEN TIME:SECONDS >= LAST_PRINT_TICK + LOOP_DT THEN {
   SET LAST_PRINT_TICK TO TIME:SECONDS.
   PRINT_TICK().
   PRESERVE.

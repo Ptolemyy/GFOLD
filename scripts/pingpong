@@ -1,83 +1,76 @@
-SET LAST_SEQ TO "".
 SET CR TO CHAR(13).
 SET LF TO CHAR(10).
-SET DATA_FILE TO "comm.txt".
-SET READY_FILE TO "comm_ready.txt".
-SET ACK_FILE TO "comm_ack.txt".
+SET RECV_FILE TO "0:/receive.txt".
 
-PRINT "pingpong data reader running (mode0 burst).".
+SET U_LIST TO LIST().
+SET HAS_U_LIST TO 0.
+SET TIME0 TO TIME:SECONDS.
+SET LOOP_DT TO 0.02.
+SET LAST_TICK TO TIME:SECONDS.
 
-IF NOT EXISTS(DATA_FILE) {
-  CREATE(DATA_FILE).
-  OPEN(DATA_FILE):WRITELN("INIT").
-}.
-IF EXISTS(READY_FILE) { DELETEPATH(READY_FILE). }.
-IF EXISTS(ACK_FILE) { DELETEPATH(ACK_FILE). }.
+FUNCTION READ_SOLVER_OUTPUT {
+  IF NOT EXISTS(RECV_FILE) { RETURN. }.
+  SET RECV_LINE TO OPEN(RECV_FILE):READALL:STRING.
+  IF RECV_LINE = "" { RETURN. }.
 
-FUNCTION COUNT_LINES {
-  PARAMETER TEXT.
-  LOCAL count IS 0.
-  LOCAL lines IS TEXT:SPLIT(LF).
-  FOR L IN lines {
+  SET HAS_FINISH TO 0.
+  SET FINISH_CODE TO 0.
+  SET U_COUNT TO 0.
+  SET NEW_U_LIST TO LIST().
+
+  SET RECV_LINE TO RECV_LINE:REPLACE(CR, "").
+  SET RECV_LINES TO RECV_LINE:SPLIT(LF).
+  FOR L IN RECV_LINES {
     IF L <> "" {
-      SET count TO count + 1.
-    }.
-  }.
-  RETURN count.
-}
-
-UNTIL FALSE {
-  IF NOT EXISTS(DATA_FILE) {
-    WAIT 0.05.
-  } ELSE {
-    // Wait for ready flag, then read and parse data (gfold_demo style).
-    IF EXISTS(READY_FILE) {
-      SET ready_line TO OPEN(READY_FILE):READALL:STRING.
-      SET ready_line TO ready_line:REPLACE(CR, "").
-      SET ready_parts TO ready_line:SPLIT(",").
-      IF ready_parts:LENGTH >= 2 AND ready_parts[0] = "READY" {
-        SET seq TO ready_parts[1].
-        IF seq <> LAST_SEQ {
-          SET LAST_SEQ TO seq.
-          SET t_parse_start TO TIME:SECONDS.
-
-          SET content TO OPEN(DATA_FILE):READALL:STRING.
-          SET content TO content:REPLACE(CR, "").
-          SET lines TO content:SPLIT(LF).
-          SET DATA_ROWS TO LIST().
-          FOR L IN lines {
-            IF L <> "" {
-              SET PARTS TO L:SPLIT(",").
-              IF PARTS:LENGTH >= 4 {
-                SET U_MAG TO PARTS[0]:TONUMBER.
-                SET U_YAW TO PARTS[1]:TONUMBER.
-                SET U_PITCH TO PARTS[2]:TONUMBER.
-                SET U_T TO PARTS[3]:TONUMBER.
-                DATA_ROWS:ADD(LIST(U_MAG, U_YAW, U_PITCH, U_T)).
-              }.
-            }.
-          }.
-
-          SET t_parse_end TO TIME:SECONDS.
-          SET parse_ms TO (t_parse_end - t_parse_start) * 1000.
-
-          IF EXISTS(ACK_FILE) { DELETEPATH(ACK_FILE). }.
-          CREATE(ACK_FILE).
-          SET af TO OPEN(ACK_FILE).
-          af:CLEAR().
-          af:WRITELN("ACK," + seq + "," + ROUND(parse_ms,3) + "," + DATA_ROWS:LENGTH).
-
-          SET rf TO OPEN(READY_FILE).
-          rf:CLEAR().
-          DELETEPATH(READY_FILE).
-
-          PRINT "ACK sent: seq=" + seq +
-                " rows=" + DATA_ROWS:LENGTH +
-                " parse(ms)=" + ROUND(parse_ms,3).
+      SET PARTS TO L:SPLIT(",").
+      IF PARTS:LENGTH >= 2 {
+        IF PARTS[0] = "COMPUTE_FINISH" AND PARTS[1]:STARTSWITH("1") {
+          SET HAS_FINISH TO 1.
+          SET FINISH_CODE TO 1.
+        } ELSE IF PARTS[0] = "COMPUTE_FINISH" AND PARTS[1]:STARTSWITH("2") {
+          SET HAS_FINISH TO 1.
+          SET FINISH_CODE TO 2.
+        } ELSE IF PARTS[0] = "U" AND PARTS:LENGTH >= 5 {
+          SET U_UP TO PARTS[1]:TONUMBER.
+          SET U_NORTH TO PARTS[2]:TONUMBER.
+          SET U_EAST TO PARTS[3]:TONUMBER.
+          SET U_T TO PARTS[4]:TONUMBER.
+          NEW_U_LIST:ADD(LIST(U_UP, U_NORTH, U_EAST, U_T)).
+          SET U_COUNT TO U_COUNT + 1.
         }.
       }.
     }.
+  }.
 
-    WAIT 0.02.
+  IF HAS_FINISH = 1 {
+    IF FINISH_CODE = 1 AND U_COUNT > 0 {
+      SET U_LIST TO NEW_U_LIST.
+      SET HAS_U_LIST TO 1.
+    } ELSE IF FINISH_CODE = 2 {
+      SET U_LIST TO LIST().
+      SET HAS_U_LIST TO 0.
+    }.
+    SET rf TO OPEN(RECV_FILE).
+    rf:CLEAR().
+    DELETEPATH(RECV_FILE).
   }.
 }
+
+FUNCTION MAIN_TICK {
+  SET NOW TO TIME:SECONDS.
+  SET DT TO NOW - TIME0.
+  SET TIME0 TO NOW.
+
+  READ_SOLVER_OUTPUT().
+
+  CLEARSCREEN.
+  PRINT "dt=" + ROUND(DT,4).
+}
+
+WHEN TIME:SECONDS >= LAST_TICK + LOOP_DT THEN {
+  SET LAST_TICK TO TIME:SECONDS.
+  MAIN_TICK().
+  PRESERVE.
+}.
+
+WAIT UNTIL FALSE.
