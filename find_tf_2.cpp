@@ -11,7 +11,7 @@ extern "C" {
 #include "cpg_solve.h"
 }
 
-SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int iters) {
+SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int iters, bool save_last_traj) {
     using clock = std::chrono::steady_clock;
     auto t0 = clock::now();
 
@@ -22,6 +22,29 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
 
     GFOLDSolver solver(cfg_in);
     const int steps = cfg_in.steps;
+    bool last_eval_feasible = false;
+
+    auto capture_last_traj = [&]() {
+        double* rx = CPG_Result.prim->r;
+        double* ry = CPG_Result.prim->r + steps;
+        double* rz = CPG_Result.prim->r + 2 * steps;
+        double* vx = CPG_Result.prim->v;
+        double* vy = CPG_Result.prim->v + steps;
+        double* vz = CPG_Result.prim->v + 2 * steps;
+        double* z = CPG_Result.prim->z;
+
+        res.last_rx.assign(rx, rx + steps);
+        res.last_ry.assign(ry, ry + steps);
+        res.last_rz.assign(rz, rz + steps);
+        res.last_vx.assign(vx, vx + steps);
+        res.last_vy.assign(vy, vy + steps);
+        res.last_vz.assign(vz, vz + steps);
+        res.last_m_traj.resize(steps);
+        for (int i = 0; i < steps; ++i) {
+            res.last_m_traj[i] = std::exp(z[i]);
+        }
+        res.has_last_traj = true;
+    };
 
     auto f = [&](double x) -> double {
         res.solve_calls++;
@@ -30,9 +53,15 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
         trial.throttle_max = (x < kThrottleSwitchTf) ? kThrottleMaxShortTf : cfg_in.throttle_max;
         trial.glide_slope_deg = (x < kThrottleSwitchTf) ? kGlideSlopeShortTfDeg : cfg_in.glide_slope_deg;
         solver.set_config(trial);
-        if (!solver.solve()) return -std::numeric_limits<double>::infinity(); // infeasible
+        if (!solver.solve()) {
+            last_eval_feasible = false;
+            return -std::numeric_limits<double>::infinity(); // infeasible
+        }
 
-        const double mass = std::exp(CPG_Result.prim->z[steps - 1]);
+        last_eval_feasible = true;
+        const int last_idx = steps - 1;
+        const double mass = std::exp(CPG_Result.prim->z[last_idx]);
+
         res.feasible = true;
         if (mass > res.best_m) { res.best_m = mass; res.best_tf = x; }
         return mass;
@@ -98,6 +127,33 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
                 w = u; fw = fu;
             } else if (fu >= fv) {
                 v = u; fv = fu;
+            }
+        }
+    }
+
+    if (save_last_traj) {
+        if (last_eval_feasible) {
+            capture_last_traj();
+        } else {
+            // Final eval may be infeasible; try one explicit final-point solve.
+            GFOLDConfig final_trial = cfg_in;
+            final_trial.tf = x;
+            final_trial.throttle_max = (x < kThrottleSwitchTf) ? kThrottleMaxShortTf : cfg_in.throttle_max;
+            final_trial.glide_slope_deg = (x < kThrottleSwitchTf) ? kGlideSlopeShortTfDeg : cfg_in.glide_slope_deg;
+            solver.set_config(final_trial);
+            if (solver.solve()) {
+                capture_last_traj();
+            } else if (res.feasible) {
+                // Fallback once to best_tf so mode0 can still export a trajectory for plotting.
+                final_trial.tf = res.best_tf;
+                final_trial.throttle_max =
+                    (res.best_tf < kThrottleSwitchTf) ? kThrottleMaxShortTf : cfg_in.throttle_max;
+                final_trial.glide_slope_deg =
+                    (res.best_tf < kThrottleSwitchTf) ? kGlideSlopeShortTfDeg : cfg_in.glide_slope_deg;
+                solver.set_config(final_trial);
+                if (solver.solve()) {
+                    capture_last_traj();
+                }
             }
         }
     }

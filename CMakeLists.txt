@@ -23,7 +23,7 @@ endif()
 add_subdirectory(${CPG_SOLVER_DIR})
 
 add_executable(test_solver main.cpp GFOLD_solver.cpp)
-add_executable(GFOLD_demo GFOLD_demo.cpp GFOLD_solver.cpp find_tf_2.cpp)
+add_executable(GFOLD_demo GFOLD_demo.cpp GFOLD_solver.cpp find_tf_2.cpp plot_recv_mode0.cpp)
 
 target_include_directories(test_solver PUBLIC 
         ${cpg_include}  
@@ -43,7 +43,11 @@ target_include_directories(GFOLD_demo PUBLIC
         ${Python3_INCLUDE_DIRS})
 
 target_link_libraries(GFOLD_demo 
-    cpg)
+    cpg
+    ${Python3_LIBRARIES}
+    pybind11::embed
+    matplotlibcpp17::matplotlibcpp17
+)
 
 
 add_executable(find_tf find_tf.cpp GFOLD_solver.cpp)

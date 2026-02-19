@@ -1,21 +1,18 @@
 // ===== Defaults (can be overridden by config.txt via RUNPATH) =====
-SET KERBIN_R TO 600000.
 SET LAT0 TO -0.0972.
 SET LON0 TO -74.5577.
-SET ALT0 TO 0.
 
 SET THROT1 TO 0.2.        // min throttle fraction
 SET THROT2 TO 0.8.        // max throttle fraction
 SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
-SET UP_BIAS_M TO -4.       // altitude bias added to reported UP_M in mode0/mode1
+SET UP_BIAS_M TO -3.       // altitude bias added to reported UP_M in mode0/mode1
 SET CUTDOWN_ALTITUDE TO 2.0. // hard engine cutoff altitude using raw UP_M (no bias)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
 SET RECOMPUTE_TIME TO 1.5.  // seconds between recompute triggers
 SET LAST_RECOMPUTE_TIME TO 0.
+SET RESEND_TIME TO 0.1.      // resend state interval when waiting for reply
 SET DEPLOY_GEAR_TIME TO 8.0. // deploy gear when remain_tf <= this value
-
-SET DEG2RAD TO CONSTANT:PI / 180.
 
 // ===== Optional config override =====
 // Provide a config.txt in the same directory with lines like:
@@ -32,9 +29,6 @@ SET DEG2RAD TO CONSTANT:PI / 180.
 SET CONFIG_FILE TO "config.txt".
 IF EXISTS(CONFIG_FILE) { RUNPATH(CONFIG_FILE). }.
 
-// Align origin altitude with terrain height at target lat/lon
-SET ALT0 TO LATLNG(LAT0, LON0):TERRAINHEIGHT.
-
 // ===== Comm files =====
 // Communication contract:
 //   - We write state to send.txt (mode0 or mode1 config).
@@ -47,7 +41,6 @@ SET ALT0 TO LATLNG(LAT0, LON0):TERRAINHEIGHT.
 // Explicitly use Archive volume paths to match PC-side writes.
 SET SEND_FILE TO "0:/send.txt".
 SET RECV_FILE TO "0:/receive.txt".
-SET MODE TO 0.               // 0 = initial solve, 1 = mode1 recompute
 SET U_LIST TO LIST().        // each entry: [u_up,u_north,u_east,t_abs]
 SET CR TO CHAR(13).
 SET LF TO CHAR(10).
@@ -57,6 +50,7 @@ SET LOOP_DT TO 0.02.
 SET TIME0_SEC TO TIME:SECONDS.
 SET ELAPSED_SEC TO 0.        // global time since script start
 SET LOOP_TIME TO 0.          // main_tick loop delta
+SET SEND_STATE_TIME TO TIME:SECONDS.
 SET LOOP_INDEX TO 0.
 SET SPEED TO 0.
 SET U_MAG TO 0.
@@ -234,9 +228,11 @@ FUNCTION TRIGGER_U_ZERO {
   RCS OFF.
 }
 
-// Send current state to PC for a fresh mode1 solve (recompute).
-// This writes a single CSV line to send.txt in the same format as mode0.
-FUNCTION SEND_MODE1_STATE {
+// Send current state to PC.
+// INFO_IN: 0 for initial solve, 1 for mode1 recompute.
+FUNCTION SEND_STATE {
+  PARAMETER INFO_IN.
+  IF RUN_ACTIVE = 0 { SET INFO_IN TO "END". }.
   SET STATE TO CALC_STATE().
   SET EAST_M TO STATE[0].
   SET NORTH_M TO STATE[1].
@@ -248,8 +244,7 @@ FUNCTION SEND_MODE1_STATE {
   SET THRUST_MAX TO STATE[7].
   SET ISP_CUR TO STATE[8].
   SET MASS_WET TO STATE[9].
-  SET MODE TO 1.
-  SET OUT_LINE TO MODE + "," +
+  SET OUT_LINE TO INFO_IN + "," +
                 ROUND(UP_M + UP_BIAS_M,1) + "," +
                 ROUND(NORTH_M,1) + "," +
                 ROUND(EAST_M,1) + "," +
@@ -266,11 +261,9 @@ FUNCTION SEND_MODE1_STATE {
                 ROUND(YGS_DEG,1) + "," +
                 ROUND(ELAPSED_SEC,2).
 
-  IF NOT EXISTS(SEND_FILE) { CREATE(SEND_FILE). }.
-  SET f TO OPEN(SEND_FILE).
-  f:CLEAR().
-  f:WRITELN(OUT_LINE).
-//  PRINT "SEND MODE1: " + OUT_LINE.
+  LOG OUT_LINE TO SEND_FILE.
+  SET SEND_STATE_TIME TO TIME:SECONDS.
+//  PRINT "SEND MODE" + INFO_IN + ": " + OUT_LINE.
 }
 
 // Read solver output from receive.txt and refresh U_LIST if complete.
@@ -400,40 +393,9 @@ FUNCTION SELECT_U {
 }
 
 // ===== Single-shot mode0 compute and write =====
-LOCAL STATE IS CALC_STATE().
-SET EAST_M TO STATE[0].
-SET NORTH_M TO STATE[1].
-SET UP_M TO STATE[2].
-SET VE TO STATE[3].
-SET VN TO STATE[4].
-SET VU TO STATE[5].
-SET SPEED TO STATE[6].
-SET THRUST_MAX TO STATE[7].
-SET ISP_CUR TO STATE[8].
-SET MASS_WET TO STATE[9].
-
-SET OUT_LINE TO MODE + "," +
-               ROUND(UP_M + UP_BIAS_M,1) + "," +
-               ROUND(NORTH_M,1) + "," +
-               ROUND(EAST_M,1) + "," +
-               ROUND(VU,2) + "," +
-               ROUND(VN,2) + "," +
-               ROUND(VE,2) + "," +
-               ROUND(SPEED,2) + "," +
-               ROUND(THRUST_MAX,3) + "," +
-               ROUND(ISP_CUR,3) + "," +
-               ROUND(MASS_WET,3) + "," +
-               ROUND(THROT1,2) + "," +
-               ROUND(THROT2,2) + "," +
-               ROUND(THETA_DEG,1) + "," +
-               ROUND(YGS_DEG,1) + "," +
-               ROUND(ELAPSED_SEC,2).
-
-IF NOT EXISTS(SEND_FILE) { CREATE(SEND_FILE). }.
-SET f TO OPEN(SEND_FILE).
-f:CLEAR().
-f:WRITELN(OUT_LINE).
-//PRINT "SEND MODE0: " + OUT_LINE.
+IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
+SEND_STATE("0").
+//PRINT "SEND MODE0".
 
 // ===== Wait for initial mode0 response =====
 // Block until PC creates receive.txt (mode0 done). Then delete it and continue.
@@ -472,15 +434,12 @@ FUNCTION MAIN_TICK {
   }.
 
   IF UP_M < CUTDOWN_ALTITUDE {
-    SET LAST_THR_CMD TO 0.
-    SET HAS_CUR_U TO 0.
     SET HAS_U_LIST TO 0.
     SET RECOMPUTE_ENABLED TO 0.
     SET RECOMPUTE_PENDING TO 0.
-    SET RUN_ACTIVE TO 0.
 //    PRINT "CUTDOWN_TRIGGER up=" + ROUND(UP_M,2) + " cutoff=" + ROUND(CUTDOWN_ALTITUDE,2).
 //    PRINT "PROGRAM_END".
-    SHUTDOWN.
+    TRIGGER_U_ZERO().
     RETURN.
   }.
 
@@ -492,14 +451,14 @@ FUNCTION MAIN_TICK {
 
   // On first tick, send initial mode1 config.
   IF LOOP_INDEX = 0 AND RECOMPUTE_ENABLED = 1 {
-    SEND_MODE1_STATE().
+    SEND_STATE("1").
     SET RECOMPUTE_PENDING TO 1.
   }.
 
   // Periodic recompute trigger based on elapsed time.
   IF RECOMPUTE_ENABLED = 1 AND RECOMPUTE_PENDING = 0 AND (ELAPSED_SEC - LAST_RECOMPUTE_TIME) >= RECOMPUTE_TIME {
 //    PRINT "RECOMPUTE_TRIGGER t=" + ROUND(ELAPSED_SEC,2).
-    SEND_MODE1_STATE().
+    SEND_STATE("1").
     SET RECOMPUTE_PENDING TO 1.
     SET LAST_RECOMPUTE_TIME TO ELAPSED_SEC.
   }.
@@ -545,20 +504,27 @@ SET LAST_U_TICK TO TIME:SECONDS.
 SET LAST_PRINT_TICK TO TIME:SECONDS.
 LOCK THROTTLE TO LAST_THR_CMD.
 LOCK STEERING TO LOOKDIRUP(STEER_CMD, -BODY:NORTH:VECTOR).
-WHEN TIME:SECONDS >= LAST_TICK + LOOP_DT THEN {
+WHEN RUN_ACTIVE = 1 AND TIME:SECONDS >= LAST_TICK + LOOP_DT THEN {
   SET LAST_TICK TO TIME:SECONDS.
   MAIN_TICK().
   PRESERVE.
 }.
-WHEN TIME:SECONDS >= LAST_U_TICK + LOOP_DT THEN {
+WHEN RUN_ACTIVE = 1 AND TIME:SECONDS >= LAST_U_TICK + LOOP_DT THEN {
   SET LOOP_TIME TO TIME:SECONDS-LAST_U_TICK.
   SET LAST_U_TICK TO TIME:SECONDS.
   U_TICK().
   PRESERVE.
 }.
-WHEN TIME:SECONDS >= LAST_PRINT_TICK + LOOP_DT THEN {
+WHEN RUN_ACTIVE = 1 AND TIME:SECONDS >= SEND_STATE_TIME + RESEND_TIME THEN {
+  SEND_STATE("INFO").
+  PRESERVE.
+}.
+WHEN RUN_ACTIVE = 1 AND TIME:SECONDS >= LAST_PRINT_TICK + LOOP_DT THEN {
   SET LAST_PRINT_TICK TO TIME:SECONDS.
   PRINT_TICK().
   PRESERVE.
+}.
+WHEN RUN_ACTIVE = 0 THEN {
+  SEND_STATE("END").
 }.
 WAIT UNTIL FALSE.

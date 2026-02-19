@@ -2,12 +2,17 @@
 #include "find_tf_2.hpp"
 
 #include <chrono>
+#include <condition_variable>
 #include <cmath>
+#include <cctype>
+#include <array>
+#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -19,6 +24,11 @@ extern "C" {
 
 namespace fs = std::filesystem;
 using namespace std::chrono_literals;
+
+void plot_recv_mode0_from_csv(
+    const std::string& recv_csv,
+    const std::string& mode0_csv,
+    const std::string& recv_vel_csv);
 
 static std::string read_last_line(const fs::path& p) {
     std::ifstream in(p);
@@ -41,8 +51,8 @@ static std::vector<std::string> split_csv(const std::string& line) {
     return out;
 }
 
-// Read the newest line from send.txt and remove it from the file.
-static std::string consume_last_line(const fs::path& p) {
+// Read the oldest line from send.txt and remove it from the file.
+static std::string consume_first_line(const fs::path& p) {
     std::ifstream in(p);
     if (!in) return "";
     std::vector<std::string> lines;
@@ -52,15 +62,15 @@ static std::string consume_last_line(const fs::path& p) {
         if (!l.empty()) lines.push_back(l);
     }
     if (lines.empty()) return "";
-    std::string last = lines.back();
-    lines.pop_back();
+    std::string first = lines.front();
+    lines.erase(lines.begin());
 
     std::ofstream out(p, std::ios::trunc);
     for (size_t i = 0; i < lines.size(); ++i) {
         out << lines[i];
         if (i + 1 < lines.size()) out << "\n";
     }
-    return last;
+    return first;
 }
 
 static bool atomic_write(const fs::path& p, const std::string& content) {
@@ -84,6 +94,134 @@ static void write_compute_finish(const fs::path& recv_path, int status_code) {
     if (!atomic_write(recv_path, oss.str())) {
 //        std::cerr << "Failed to write receive.txt\n";
     }
+}
+
+enum class IncomingType {
+    Mode0,
+    Mode1,
+    Info,
+    End,
+    Unknown
+};
+
+static std::string to_upper_ascii(std::string s) {
+    for (char& c : s) {
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    }
+    return s;
+}
+
+static IncomingType parse_incoming_type(const std::string& token0) {
+    if (token0 == "0") return IncomingType::Mode0;
+    if (token0 == "1") return IncomingType::Mode1;
+    const std::string u = to_upper_ascii(token0);
+    if (u == "INFO") return IncomingType::Info;
+    if (u == "END") return IncomingType::End;
+    return IncomingType::Unknown;
+}
+
+struct InfoEndRvm {
+    std::string tag;
+    double r0 = std::numeric_limits<double>::quiet_NaN();
+    double r1 = std::numeric_limits<double>::quiet_NaN();
+    double r2 = std::numeric_limits<double>::quiet_NaN();
+    double v0 = std::numeric_limits<double>::quiet_NaN();
+    double v1 = std::numeric_limits<double>::quiet_NaN();
+    double v2 = std::numeric_limits<double>::quiet_NaN();
+    double m = std::numeric_limits<double>::quiet_NaN();
+};
+
+static bool parse_info_end_rvm(const std::vector<std::string>& tok, InfoEndRvm& out) {
+    out.tag = tok.empty() ? "" : tok[0];
+    bool ok = true;
+    auto parse_one = [&](size_t idx, double& dst) {
+        if (idx >= tok.size()) {
+            ok = false;
+            return;
+        }
+        try {
+            dst = std::stod(tok[idx]);
+        } catch (...) {
+            ok = false;
+        }
+    };
+
+    parse_one(1, out.r0);
+    parse_one(2, out.r1);
+    parse_one(3, out.r2);
+    parse_one(4, out.v0);
+    parse_one(5, out.v1);
+    parse_one(6, out.v2);
+    parse_one(10, out.m);
+    return ok;
+}
+
+static bool try_parse_double_at(const std::vector<std::string>& tok, size_t idx, double& out) {
+    if (idx >= tok.size()) return false;
+    try {
+        out = std::stod(tok[idx]);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+static bool try_parse_r_xyz(const std::vector<std::string>& tok, std::array<double, 3>& r_xyz) {
+    if (tok.size() < 4) return false;
+    try {
+        // send format is: mode, up, north, east, ...
+        r_xyz[0] = std::stod(tok[1]); // up
+        r_xyz[1] = std::stod(tok[2]); // north
+        r_xyz[2] = std::stod(tok[3]); // east
+    } catch (...) {
+        return false;
+    }
+    return true;
+}
+
+static bool try_parse_v_enu_t(const std::vector<std::string>& tok, std::array<double, 4>& v_enu_t) {
+    // send format is: mode, up, north, east, vu, vn, ve, ..., elapsed_sec
+    if (tok.size() < 16) return false;
+    try {
+        v_enu_t[0] = std::stod(tok[15]); // t
+        v_enu_t[1] = std::stod(tok[4]);  // v_up
+        v_enu_t[2] = std::stod(tok[5]);  // v_north
+        v_enu_t[3] = std::stod(tok[6]);  // v_east
+    } catch (...) {
+        return false;
+    }
+    return true;
+}
+
+static bool write_xyz_csv(const fs::path& out_path,
+                          const std::vector<double>& x,
+                          const std::vector<double>& y,
+                          const std::vector<double>& z) {
+    if (x.size() != y.size() || x.size() != z.size()) return false;
+    std::ostringstream oss;
+    oss << std::setprecision(10) << std::fixed;
+    for (size_t i = 0; i < x.size(); ++i) {
+        oss << x[i] << "," << y[i] << "," << z[i] << "\n";
+    }
+    return atomic_write(out_path, oss.str());
+}
+
+static bool write_xyz_csv(const fs::path& out_path, const std::vector<std::array<double, 3>>& pts) {
+    std::ostringstream oss;
+    oss << std::setprecision(10) << std::fixed;
+    for (const auto& p : pts) {
+        oss << p[0] << "," << p[1] << "," << p[2] << "\n";
+    }
+    return atomic_write(out_path, oss.str());
+}
+
+static bool write_tuvw_csv(const fs::path& out_path, const std::vector<std::array<double, 4>>& pts) {
+    std::ostringstream oss;
+    oss << std::setprecision(10) << std::fixed;
+    for (const auto& p : pts) {
+        oss << p[0] << "," << p[1] << "," << p[2] << "," << p[3] << "\n";
+    }
+    return atomic_write(out_path, oss.str());
 }
 
 static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDConfig& cfg, double* base_time_out) {
@@ -203,25 +341,109 @@ int main() {
     double best_tf = 0.0;
     bool has_mode0_best_m = false;
     double mode0_best_m = 0.0;
+    std::vector<double> mode0_last_rx;
+    std::vector<double> mode0_last_ry;
+    std::vector<double> mode0_last_rz;
+    std::vector<double> mode0_last_vx;
+    std::vector<double> mode0_last_vy;
+    std::vector<double> mode0_last_vz;
+    std::vector<double> mode0_last_m_traj;
     bool fallback_enabled = true;
     bool mode1_solver_enabled = true;
     TrajectoryCache last_traj;
+    std::vector<std::array<double, 3>> recv_r_points;
+    std::vector<std::array<double, 4>> recv_v_enu_t_points;
+    bool end_plot_launched = false;
     const std::vector<int> sample_gaps = {0, 1, 3, 4, 9};
     size_t sample_gap_mode = 0;
     constexpr int max_lines = 10;
     constexpr double recompute_time = 1.5+0.3;
+    std::vector<InfoEndRvm> info_end_rvm_list;
+
+    std::mutex queue_mu;
+    std::condition_variable queue_cv;
+    std::deque<std::string> line_queue;
+
+    std::thread recv_thread([&]() {
+        while (true) {
+            std::string line = consume_first_line(send_path);
+            if (!line.empty()) {
+                {
+                    std::lock_guard<std::mutex> lk(queue_mu);
+                    line_queue.push_back(std::move(line));
+                }
+                queue_cv.notify_one();
+            } else {
+                std::this_thread::sleep_for(1ms);
+            }
+        }
+    });
+    recv_thread.detach();
 
     while (true) {
-        std::this_thread::sleep_for(20ms);
-
-        std::string line = consume_last_line(send_path);
-        if (line.empty()) continue;
+        std::string line;
+        {
+            std::unique_lock<std::mutex> lk(queue_mu);
+            queue_cv.wait_for(lk, 20ms, [&]() { return !line_queue.empty(); });
+            if (line_queue.empty()) continue;
+            line = std::move(line_queue.front());
+            line_queue.pop_front();
+        }
 
         auto tok = split_csv(line);
         if (tok.empty()) continue;
 
-        int mode = 0;
-        try { mode = std::stoi(tok[0]); } catch (...) { continue; }
+        const IncomingType incoming = parse_incoming_type(tok[0]);
+        if (incoming == IncomingType::Unknown) continue;
+        std::array<double, 3> r_xyz{};
+        if (try_parse_r_xyz(tok, r_xyz)) {
+            recv_r_points.push_back(r_xyz);
+        }
+        std::array<double, 4> v_enu_t{};
+        if (try_parse_v_enu_t(tok, v_enu_t)) {
+            recv_v_enu_t_points.push_back(v_enu_t);
+        }
+        if (incoming == IncomingType::Info || incoming == IncomingType::End) {
+            InfoEndRvm sample;
+            (void)parse_info_end_rvm(tok, sample);
+            info_end_rvm_list.push_back(sample);
+            if (incoming == IncomingType::End && !end_plot_launched) {
+                double end_time_sec = std::numeric_limits<double>::quiet_NaN();
+                const bool has_end_time = try_parse_double_at(tok, 15, end_time_sec);
+                const double n_err = sample.r1;
+                const double e_err = sample.r2;
+                const double h_err = std::sqrt(n_err * n_err + e_err * e_err);
+                const double end_m_kg = sample.m * 1000.0; // kOS sends MASS_WET in tons
+
+                std::cout << std::fixed << std::setprecision(6);
+                std::cout << "[end] best_m="
+                          << (has_mode0_best_m ? mode0_best_m : -1.0)
+                          << " end_m=" << end_m_kg
+                          << " horiz_err_N=" << n_err
+                          << " horiz_err_E=" << e_err
+                          << " horiz_err_mag=" << h_err;
+                if (has_end_time) {
+                    std::cout << " landing_t=" << end_time_sec;
+                } else {
+                    std::cout << " landing_t=n/a";
+                }
+                std::cout << "\n";
+
+                const fs::path recv_csv = "plot_recv_r.csv";
+                const fs::path mode0_csv = "plot_mode0_r.csv";
+                const fs::path recv_vel_csv = "plot_recv_v_enu_t.csv";
+                const bool ok_recv = write_xyz_csv(recv_csv, recv_r_points);
+                const bool ok_mode0 = write_xyz_csv(mode0_csv, mode0_last_rx, mode0_last_ry, mode0_last_rz);
+                const bool ok_recv_vel = write_tuvw_csv(recv_vel_csv, recv_v_enu_t_points);
+                if (ok_recv && ok_mode0 && ok_recv_vel) {
+                    plot_recv_mode0_from_csv(recv_csv.string(), mode0_csv.string(), recv_vel_csv.string());
+                    end_plot_launched = true;
+                }
+            }
+            continue;
+        }
+
+        const int mode = (incoming == IncomingType::Mode0) ? 0 : 1;
 
         if (mode == 0) {
             GFOLDConfig cfg; // start with defaults
@@ -247,7 +469,14 @@ int main() {
 //                      << "\n";
 
             const double L = 10.0, R = 90.0;
-            SearchResult res = find_best_tf(cfg, L, R, 20);
+            mode0_last_rx.clear();
+            mode0_last_ry.clear();
+            mode0_last_rz.clear();
+            mode0_last_vx.clear();
+            mode0_last_vy.clear();
+            mode0_last_vz.clear();
+            mode0_last_m_traj.clear();
+            SearchResult res = find_best_tf(cfg, L, R, 20, true);
 
             if (!res.feasible) {
 //                std::cout << "[mode0] infeasible in [" << L << ", " << R << "]\n";
@@ -259,6 +488,15 @@ int main() {
             best_tf = res.best_tf;
             mode0_best_m = res.best_m;
             has_mode0_best_m = true;
+            if (res.has_last_traj) {
+                mode0_last_rx = res.last_rx;
+                mode0_last_ry = res.last_ry;
+                mode0_last_rz = res.last_rz;
+                mode0_last_vx = res.last_vx;
+                mode0_last_vy = res.last_vy;
+                mode0_last_vz = res.last_vz;
+                mode0_last_m_traj = res.last_m_traj;
+            }
             fallback_enabled = true;
             mode1_solver_enabled = true;
             last_traj.valid = false;
@@ -318,7 +556,7 @@ int main() {
                         GFOLDConfig search_cfg = cfg;
                         search_cfg.throttle_max = nominal_throttle_max;
                         search_cfg.glide_slope_deg = nominal_glide_slope_deg;
-                        SearchResult retry = find_best_tf(search_cfg, tf_min, tf_max, 4);
+                        SearchResult retry = find_best_tf(search_cfg, tf_min, tf_max, 4, false);
                         if (!retry.feasible) {
                             fallback_state = "infeasible";
                             const bool gap_is_9 =
