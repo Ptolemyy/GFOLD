@@ -19,21 +19,21 @@ int main()
     // Problem setup (single N consistent with generated solver)
     GFOLDConfig cfg;
     cfg.steps = 100;
-    cfg.tf = 21.748038;
-    cfg.g0 = 9.81;
-    cfg.Isp = 251.625;
-    cfg.T_max = 169061.0;
+    cfg.tf = 57.29;
+    cfg.g0 = 3.71;
+    cfg.Isp = 2000.0/3.71;
+    cfg.T_max = 24000.0;
     cfg.throttle_min = 0.2;
     cfg.throttle_max = 0.8;
-    cfg.m0 = 5327.0;
-    cfg.r0[0] = 111.300000;
-    cfg.r0[1] = -0.300000;
-    cfg.r0[2] = 0.700000;
-    cfg.v0[0] = -67.120000;
-    cfg.v0[1] = 0.8300;
-    cfg.v0[2] = -0.930000;
+    cfg.m0 = 2000.0;
+    cfg.r0[0] = 2400.00000;
+    cfg.r0[1] = 450.00000;
+    cfg.r0[2] = -330.00000;
+    cfg.v0[0] = -10.0000;
+    cfg.v0[1] = -40.00;
+    cfg.v0[2] = 10.0000;
     cfg.glide_slope_deg = 30.0;
-    cfg.max_angle_deg = 25.0;
+    cfg.max_angle_deg = 45.0;
 
     GFOLDSolver solver(cfg);
 
