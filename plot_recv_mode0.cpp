@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -74,6 +75,13 @@ static ENUVelSeries load_v_enu_t_csv(const std::string& path) {
     return s;
 }
 
+static void ensure_python_interpreter() {
+    static std::unique_ptr<py::scoped_interpreter> guard;
+    if (!guard) {
+        guard = std::make_unique<py::scoped_interpreter>();
+    }
+}
+
 void plot_recv_mode0_from_csv(
     const std::string& recv_csv,
     const std::string& mode0_csv,
@@ -82,7 +90,8 @@ void plot_recv_mode0_from_csv(
     const XYZSeries mode0 = load_xyz_csv(mode0_csv);
     const ENUVelSeries vel = load_v_enu_t_csv(recv_vel_csv);
 
-    py::scoped_interpreter guard{};
+    ensure_python_interpreter();
+    py::module_::import("matplotlib.pyplot").attr("close")("all");
     auto plt = matplotlibcpp17::pyplot::import();
     auto fig = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(11, 10)));
     auto ax = fig.add_subplot(Args(2, 1, 1), Kwargs("projection"_a = "3d"));
