@@ -22,7 +22,6 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
 
     GFOLDSolver solver(cfg_in);
     const int steps = cfg_in.steps;
-    bool last_eval_feasible = false;
 
     auto capture_last_traj = [&]() {
         double* rx = CPG_Result.prim->r;
@@ -53,14 +52,14 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
         trial.throttle_max = (x < kThrottleSwitchTf) ? kThrottleMaxShortTf : cfg_in.throttle_max;
         trial.glide_slope_deg = (x < kThrottleSwitchTf) ? kGlideSlopeShortTfDeg : cfg_in.glide_slope_deg;
         solver.set_config(trial);
-        if (!solver.solve()) {
-            last_eval_feasible = false;
-            return -std::numeric_limits<double>::infinity(); // infeasible
-        }
+        if (!solver.solve()) return -std::numeric_limits<double>::infinity(); // infeasible
 
-        last_eval_feasible = true;
         const int last_idx = steps - 1;
         const double mass = std::exp(CPG_Result.prim->z[last_idx]);
+        if (save_last_traj) {
+            // Overwrite with the latest feasible iterate trajectory.
+            capture_last_traj();
+        }
 
         res.feasible = true;
         if (mass > res.best_m) { res.best_m = mass; res.best_tf = x; }
@@ -127,33 +126,6 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
                 w = u; fw = fu;
             } else if (fu >= fv) {
                 v = u; fv = fu;
-            }
-        }
-    }
-
-    if (save_last_traj) {
-        if (last_eval_feasible) {
-            capture_last_traj();
-        } else {
-            // Final eval may be infeasible; try one explicit final-point solve.
-            GFOLDConfig final_trial = cfg_in;
-            final_trial.tf = x;
-            final_trial.throttle_max = (x < kThrottleSwitchTf) ? kThrottleMaxShortTf : cfg_in.throttle_max;
-            final_trial.glide_slope_deg = (x < kThrottleSwitchTf) ? kGlideSlopeShortTfDeg : cfg_in.glide_slope_deg;
-            solver.set_config(final_trial);
-            if (solver.solve()) {
-                capture_last_traj();
-            } else if (res.feasible) {
-                // Fallback once to best_tf so mode0 can still export a trajectory for plotting.
-                final_trial.tf = res.best_tf;
-                final_trial.throttle_max =
-                    (res.best_tf < kThrottleSwitchTf) ? kThrottleMaxShortTf : cfg_in.throttle_max;
-                final_trial.glide_slope_deg =
-                    (res.best_tf < kThrottleSwitchTf) ? kGlideSlopeShortTfDeg : cfg_in.glide_slope_deg;
-                solver.set_config(final_trial);
-                if (solver.solve()) {
-                    capture_last_traj();
-                }
             }
         }
     }

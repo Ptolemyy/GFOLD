@@ -446,6 +446,19 @@ int main() {
         const int mode = (incoming == IncomingType::Mode0) ? 0 : 1;
 
         if (mode == 0) {
+            // A new mode0 request starts a fresh run; drop previous run history.
+            recv_r_points.clear();
+            recv_v_enu_t_points.clear();
+            info_end_rvm_list.clear();
+            end_plot_launched = false;
+            mode0_last_rx.clear();
+            mode0_last_ry.clear();
+            mode0_last_rz.clear();
+            mode0_last_vx.clear();
+            mode0_last_vy.clear();
+            mode0_last_vz.clear();
+            mode0_last_m_traj.clear();
+
             GFOLDConfig cfg; // start with defaults
             cfg.tf = 60.0;   // placeholder; actual tf is searched over
             cfg.g0 = 9.81;
@@ -469,13 +482,6 @@ int main() {
 //                      << "\n";
 
             const double L = 10.0, R = 90.0;
-            mode0_last_rx.clear();
-            mode0_last_ry.clear();
-            mode0_last_rz.clear();
-            mode0_last_vx.clear();
-            mode0_last_vy.clear();
-            mode0_last_vz.clear();
-            mode0_last_m_traj.clear();
             SearchResult res = find_best_tf(cfg, L, R, 20, true);
 
             if (!res.feasible) {
