@@ -341,6 +341,8 @@ int main() {
     double best_tf = 0.0;
     bool has_mode0_best_m = false;
     double mode0_best_m = 0.0;
+    bool has_mode0_elapsed_sec = false;
+    double mode0_elapsed_sec = 0.0;
     std::vector<double> mode0_last_rx;
     std::vector<double> mode0_last_ry;
     std::vector<double> mode0_last_rz;
@@ -384,7 +386,7 @@ int main() {
         std::string line;
         {
             std::unique_lock<std::mutex> lk(queue_mu);
-            queue_cv.wait_for(lk, 20ms, [&]() { return !line_queue.empty(); });
+            queue_cv.wait_for(lk, 1ms, [&]() { return !line_queue.empty(); });
             if (line_queue.empty()) continue;
             line = std::move(line_queue.front());
             line_queue.pop_front();
@@ -414,14 +416,60 @@ int main() {
                 const double e_err = sample.r2;
                 const double h_err = std::sqrt(n_err * n_err + e_err * e_err);
                 const double end_m_kg = sample.m * 1000.0; // kOS sends MASS_WET in tons
+                const bool has_mode0_r0 =
+                    !mode0_last_rx.empty() &&
+                    !mode0_last_ry.empty() &&
+                    !mode0_last_rz.empty();
+                const bool has_recv_r0 = !recv_r_points.empty();
+                const bool has_mode0_v0 =
+                    !mode0_last_vx.empty() &&
+                    !mode0_last_vy.empty() &&
+                    !mode0_last_vz.empty();
+                const bool has_recv_v0 = !recv_v_enu_t_points.empty();
+                double dr_up = std::numeric_limits<double>::quiet_NaN();
+                double dr_north = std::numeric_limits<double>::quiet_NaN();
+                double dr_east = std::numeric_limits<double>::quiet_NaN();
+                double dv2_up = std::numeric_limits<double>::quiet_NaN();
+                double dv2_north = std::numeric_limits<double>::quiet_NaN();
+                double dv2_east = std::numeric_limits<double>::quiet_NaN();
+                if (has_mode0_r0 && has_recv_r0) {
+                    dr_up = recv_r_points.front()[0] - mode0_last_rx.front();
+                    dr_north = recv_r_points.front()[1] - mode0_last_ry.front();
+                    dr_east = recv_r_points.front()[2] - mode0_last_rz.front();
+                }
+                if (has_mode0_v0 && has_recv_v0) {
+                    const double recv_up = recv_v_enu_t_points.front()[1];
+                    const double recv_north = recv_v_enu_t_points.front()[2];
+                    const double recv_east = recv_v_enu_t_points.front()[3];
+                    const double mode0_up = mode0_last_vx.front();
+                    const double mode0_north = mode0_last_vy.front();
+                    const double mode0_east = mode0_last_vz.front();
+                    dv2_up = (recv_up * recv_up) - (mode0_up * mode0_up);
+                    dv2_north = (recv_north * recv_north) - (mode0_north * mode0_north);
+                    dv2_east = (recv_east * recv_east) - (mode0_east * mode0_east);
+                }
 
                 std::cout << std::fixed << std::setprecision(6);
                 std::cout << "[end] best_m="
                           << (has_mode0_best_m ? mode0_best_m : -1.0)
+                          << " mode0_time="
+                          << (has_mode0_elapsed_sec ? mode0_elapsed_sec : -1.0)
                           << " end_m=" << end_m_kg
                           << " horiz_err_N=" << n_err
                           << " horiz_err_E=" << e_err
                           << " horiz_err_mag=" << h_err;
+                if (has_mode0_r0 && has_recv_r0) {
+                    std::cout << " first_r_err=["
+                              << dr_up << "," << dr_north << "," << dr_east << "]";
+                } else {
+                    std::cout << " first_r_err=n/a";
+                }
+                if (has_mode0_v0 && has_recv_v0) {
+                    std::cout << " first_v2_err=["
+                              << dv2_up << "," << dv2_north << "," << dv2_east << "]";
+                } else {
+                    std::cout << " first_v2_err=n/a";
+                }
                 if (has_end_time) {
                     std::cout << " landing_t=" << end_time_sec;
                 } else {
@@ -451,6 +499,10 @@ int main() {
             recv_v_enu_t_points.clear();
             info_end_rvm_list.clear();
             end_plot_launched = false;
+            has_mode0_best_m = false;
+            mode0_best_m = 0.0;
+            has_mode0_elapsed_sec = false;
+            mode0_elapsed_sec = 0.0;
             mode0_last_rx.clear();
             mode0_last_ry.clear();
             mode0_last_rz.clear();
@@ -482,7 +534,7 @@ int main() {
 //                      << "\n";
 
             const double L = 10.0, R = 90.0;
-            SearchResult res = find_best_tf(cfg, L, R, 20, true);
+            SearchResult res = find_best_tf(cfg, L, R, 10, true);
 
             if (!res.feasible) {
 //                std::cout << "[mode0] infeasible in [" << L << ", " << R << "]\n";
@@ -494,6 +546,8 @@ int main() {
             best_tf = res.best_tf;
             mode0_best_m = res.best_m;
             has_mode0_best_m = true;
+            has_mode0_elapsed_sec = true;
+            mode0_elapsed_sec = res.elapsed_sec;
             if (res.has_last_traj) {
                 mode0_last_rx = res.last_rx;
                 mode0_last_ry = res.last_ry;

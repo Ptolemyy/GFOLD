@@ -6,6 +6,8 @@ SET THROT1 TO 0.2.        // min throttle fraction
 SET THROT2 TO 0.8.        // max throttle fraction
 SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
+SET MODE0_H TO 3.5.       // mode0 virtual altitude offset (m)
+SET MODE0_A TO 9.8.       // mode0 acceleration for VU correction (m/s^2)
 SET UP_BIAS_M TO -3.       // altitude bias added to reported UP_M in mode0/mode1
 SET CUTDOWN_ALTITUDE TO 2.0. // hard engine cutoff altitude using raw UP_M (no bias)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
@@ -23,6 +25,8 @@ SET DEPLOY_GEAR_TIME TO 8.0. // deploy gear when remain_tf <= this value
 //   SET THROT2 TO 0.8.
 //   SET THETA_DEG TO 45.
 //   SET YGS_DEG TO 30.
+//   SET MODE0_H TO 3.5.
+//   SET MODE0_A TO 9.8.
 
 //   SET LAT0 TO -0.09694444.
 //   SET LON0 TO -74.617. VAB
@@ -244,11 +248,17 @@ FUNCTION SEND_STATE {
   SET THRUST_MAX TO STATE[7].
   SET ISP_CUR TO STATE[8].
   SET MASS_WET TO STATE[9].
+  LOCAL SEND_UP_M IS UP_M.
+  LOCAL SEND_VU IS VU.
+  IF INFO_IN = "0" {
+    SET SEND_UP_M TO UP_M - MODE0_H.
+    SET SEND_VU TO -SQRT((VU * VU) + (2 * MODE0_A * MODE0_H)).
+  }.
   SET OUT_LINE TO INFO_IN + "," +
-                ROUND(UP_M + UP_BIAS_M,1) + "," +
+                ROUND(SEND_UP_M + UP_BIAS_M,1) + "," +
                 ROUND(NORTH_M,1) + "," +
                 ROUND(EAST_M,1) + "," +
-                ROUND(VU,2) + "," +
+                ROUND(SEND_VU,2) + "," +
                 ROUND(VN,2) + "," +
                 ROUND(VE,2) + "," +
                 ROUND(SPEED,2) + "," +
