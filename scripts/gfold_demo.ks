@@ -8,7 +8,7 @@ SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
 SET MODE0_t TO 0.48.       // mode0 virtual altitude offset (m)
 SET MODE0_A TO 9.4.       // mode0 acceleration for VU correction (m/s^2)
-SET UP_BIAS_M TO -8.       // altitude bias added to reported UP_M in mode0/mode1
+SET UP_BIAS_M TO -3.       // altitude bias added to reported UP_M in mode0/mode1
 SET CUTDOWN_ALTITUDE TO 2.0. // hard engine cutoff altitude using raw UP_M (no bias)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
 SET RECOMPUTE_INTERVAL TO 1.0.  // seconds between recompute triggers
@@ -23,7 +23,7 @@ SET CYL_RADIUS TO 1.3.
 SET Cd_trans TO 5.0.
 SET rho_atm TO 1.139.
 
-SET AREA TO CONSTANT:PI * CYL_HEIGHT * CYL_RADIUS / 2.
+SET AREA TO CONSTANT:PI * CYL_HEIGHT * CYL_RADIUS / 2 + 10.
 // ===== Optional config override =====
 // Provide a config.txt in the same directory with lines like:
 //   SET LAT0 TO -0.0972.

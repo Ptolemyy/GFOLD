@@ -264,20 +264,50 @@ struct TrajectoryCache {
     std::vector<double> ux;
     std::vector<double> uy;
     std::vector<double> uz;
+    std::vector<double> vx;
+    std::vector<double> vy;
+    std::vector<double> vz;
     std::vector<double> rx;
     std::vector<double> ry;
     std::vector<double> rz;
     bool valid = false;
 };
 
-static int closest_prior_index(const TrajectoryCache& traj, const double r0[3]) {
+static int closest_prior_index_by_r(const TrajectoryCache& traj, const double r0[3]) {
     if (!traj.valid || traj.steps <= 0) return 0;
+    if (static_cast<int>(traj.rx.size()) < traj.steps ||
+        static_cast<int>(traj.ry.size()) < traj.steps ||
+        static_cast<int>(traj.rz.size()) < traj.steps) {
+        return 0;
+    }
     int best_idx = 0;
     double best_d2 = (std::numeric_limits<double>::max)();
     for (int i = 0; i < traj.steps; ++i) {
         const double dx = traj.rx[i] - r0[0];
         const double dy = traj.ry[i] - r0[1];
         const double dz = traj.rz[i] - r0[2];
+        const double d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 < best_d2) {
+            best_d2 = d2;
+            best_idx = i;
+        }
+    }
+    return best_idx;
+}
+
+static int closest_prior_index_by_v(const TrajectoryCache& traj, const double v0[3]) {
+    if (!traj.valid || traj.steps <= 0) return 0;
+    if (static_cast<int>(traj.vx.size()) < traj.steps ||
+        static_cast<int>(traj.vy.size()) < traj.steps ||
+        static_cast<int>(traj.vz.size()) < traj.steps) {
+        return 0;
+    }
+    int best_idx = 0;
+    double best_d2 = (std::numeric_limits<double>::max)();
+    for (int i = 0; i < traj.steps; ++i) {
+        const double dx = traj.vx[i] - v0[0];
+        const double dy = traj.vy[i] - v0[1];
+        const double dz = traj.vz[i] - v0[2];
         const double d2 = dx * dx + dy * dy + dz * dz;
         if (d2 < best_d2) {
             best_d2 = d2;
@@ -583,7 +613,7 @@ int main() {
             }
 
             if (last_traj.valid && last_traj.steps == cfg.steps && last_traj.tf > 0.0) {
-                const int idx = closest_prior_index(last_traj, cfg.r0);
+                const int idx = closest_prior_index_by_r(last_traj, cfg.r0);
                 const double dt_prev = last_traj.tf / static_cast<double>(last_traj.steps);
                 const double rem_tf = dt_prev * static_cast<double>(last_traj.steps - idx);
                 if (rem_tf > 0.0) cfg.tf = rem_tf;
@@ -677,6 +707,9 @@ int main() {
                 double* ux = CPG_Result.prim->u;
                 double* uy = CPG_Result.prim->u + steps;
                 double* uz = CPG_Result.prim->u + 2 * steps;
+                double* vx = CPG_Result.prim->v;
+                double* vy = CPG_Result.prim->v + steps;
+                double* vz = CPG_Result.prim->v + 2 * steps;
                 double* rx = CPG_Result.prim->r;
                 double* ry = CPG_Result.prim->r + steps;
                 double* rz = CPG_Result.prim->r + 2 * steps;
@@ -686,6 +719,9 @@ int main() {
                 active_traj.ux.assign(ux, ux + steps);
                 active_traj.uy.assign(uy, uy + steps);
                 active_traj.uz.assign(uz, uz + steps);
+                active_traj.vx.assign(vx, vx + steps);
+                active_traj.vy.assign(vy, vy + steps);
+                active_traj.vz.assign(vz, vz + steps);
                 active_traj.rx.assign(rx, rx + steps);
                 active_traj.ry.assign(ry, ry + steps);
                 active_traj.rz.assign(rz, rz + steps);
@@ -698,6 +734,9 @@ int main() {
                     static_cast<int>(last_traj.ux.size()) == last_traj.steps &&
                     static_cast<int>(last_traj.uy.size()) == last_traj.steps &&
                     static_cast<int>(last_traj.uz.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.vx.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.vy.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.vz.size()) == last_traj.steps &&
                     static_cast<int>(last_traj.rx.size()) == last_traj.steps &&
                     static_cast<int>(last_traj.ry.size()) == last_traj.steps &&
                     static_cast<int>(last_traj.rz.size()) == last_traj.steps;
@@ -708,7 +747,7 @@ int main() {
                     continue;
                 }
 
-                const int start_idx = closest_prior_index(last_traj, cfg.r0);
+                const int start_idx = closest_prior_index_by_v(last_traj, cfg.v0);
                 if (start_idx < 0 || start_idx >= last_traj.steps) {
 //                    std::cerr << "[mode1] invalid cached start_idx=" << start_idx << "\n";
                     write_compute_finish(recv_path, 2);
@@ -728,6 +767,9 @@ int main() {
                 active_traj.ux.assign(last_traj.ux.begin() + start_idx, last_traj.ux.end());
                 active_traj.uy.assign(last_traj.uy.begin() + start_idx, last_traj.uy.end());
                 active_traj.uz.assign(last_traj.uz.begin() + start_idx, last_traj.uz.end());
+                active_traj.vx.assign(last_traj.vx.begin() + start_idx, last_traj.vx.end());
+                active_traj.vy.assign(last_traj.vy.begin() + start_idx, last_traj.vy.end());
+                active_traj.vz.assign(last_traj.vz.begin() + start_idx, last_traj.vz.end());
                 active_traj.rx.assign(last_traj.rx.begin() + start_idx, last_traj.rx.end());
                 active_traj.ry.assign(last_traj.ry.begin() + start_idx, last_traj.ry.end());
                 active_traj.rz.assign(last_traj.rz.begin() + start_idx, last_traj.rz.end());
