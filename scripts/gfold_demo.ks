@@ -6,16 +6,24 @@ SET THROT1 TO 0.2.        // min throttle fraction
 SET THROT2 TO 0.8.        // max throttle fraction
 SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
-SET MODE0_H TO 3.5.       // mode0 virtual altitude offset (m)
-SET MODE0_A TO 9.8.       // mode0 acceleration for VU correction (m/s^2)
-SET UP_BIAS_M TO -3.       // altitude bias added to reported UP_M in mode0/mode1
+SET MODE0_t TO 0.48.       // mode0 virtual altitude offset (m)
+SET MODE0_A TO 9.4.       // mode0 acceleration for VU correction (m/s^2)
+SET UP_BIAS_M TO -8.       // altitude bias added to reported UP_M in mode0/mode1
 SET CUTDOWN_ALTITUDE TO 2.0. // hard engine cutoff altitude using raw UP_M (no bias)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
-SET RECOMPUTE_TIME TO 1.5.  // seconds between recompute triggers
+SET RECOMPUTE_INTERVAL TO 1.0.  // seconds between recompute triggers
+SET RECOMPUTE_TIME TO -1.       // measured recompute latency (s)
 SET LAST_RECOMPUTE_TIME TO 0.
+SET RECOMPUTE_BEGIN_TIME TO -1.   // wall-clock start time for latest mode1 recompute request
 SET RESEND_TIME TO 0.1.      // resend state interval when waiting for reply
 SET DEPLOY_GEAR_TIME TO 8.0. // deploy gear when remain_tf <= this value
 
+SET CYL_HEIGHT TO 3.8.
+SET CYL_RADIUS TO 1.3.
+SET Cd_trans TO 5.0.
+SET rho_atm TO 1.139.
+
+SET AREA TO CONSTANT:PI * CYL_HEIGHT * CYL_RADIUS / 2.
 // ===== Optional config override =====
 // Provide a config.txt in the same directory with lines like:
 //   SET LAT0 TO -0.0972.
@@ -26,7 +34,7 @@ SET DEPLOY_GEAR_TIME TO 8.0. // deploy gear when remain_tf <= this value
 //   SET THETA_DEG TO 45.
 //   SET YGS_DEG TO 30.
 //   SET MODE0_H TO 3.5.
-//   SET MODE0_A TO 9.8.
+//   SET MODE0_A TO 9.8.  
 
 //   SET LAT0 TO -0.09694444.
 //   SET LON0 TO -74.617. VAB
@@ -71,6 +79,7 @@ SET LAST_U_TICK TO 0.
 SET LAST_PRINT_TICK TO 0.
 SET RUN_ACTIVE TO 1.
 SET GEAR_DEPLOYED TO 0.      // one-shot landing gear deploy latch
+SET F_d_mag TO 0.0.
 
 SET CONFIG:ipu TO 2000.
 
@@ -81,6 +90,13 @@ IF EXISTS(SEND_FILE) { DELETEPATH(SEND_FILE). }.
 // Also clear stale receive.txt to avoid running old/invalid commands
 IF EXISTS(RECV_FILE) { DELETEPATH(RECV_FILE). }.
 
+LIST ENGINES IN ENGS.
+IF ENGS:LENGTH > 0 {
+  SET ENG TO ENGS[0].
+    FOR E IN ENGS {
+      IF E:AVAILABLETHRUST > 0 { SET ENG TO E. BREAK. }.
+    }.
+}
 // Startup vehicle mode setup requested by flight procedure.
 STAGE.
 RCS ON.
@@ -170,12 +186,8 @@ FUNCTION CALC_STATE {
   LOCAL ATM_AT IS SHIP:BODY:ATM:ALTITUDEPRESSURE(SHIP:ALTITUDE).
   LOCAL THRUST_MAX IS SHIP:AVAILABLETHRUSTAT(ATM_AT).
   LOCAL ISP_CUR IS 0.
-  LIST ENGINES IN ENGS.
+
   IF ENGS:LENGTH > 0 {
-    LOCAL ENG IS ENGS[0].
-    FOR E IN ENGS {
-      IF E:AVAILABLETHRUST > 0 { SET ENG TO E. BREAK. }.
-    }.
     SET ISP_CUR TO ENG:ISPAT(ATM_AT).
   }.
   LOCAL MASS_WET IS SHIP:MASS.
@@ -202,8 +214,21 @@ FUNCTION APPLY_THRUST {
   SET r0 TO BODY:position:normalized.
   LOCAL enu_axes IS GET_LH_ENU_AXES(r0).
   
-  SET STEER_CMD TO PFRAME_TO_XYZ(V(U_EAST, U_NORTH, U_UP), enu_axes).          // 反向推力向量在世界坐标系下
-  LOCAL U_MAG IS SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
+  SET vel TO SHIP:VELOCITY:SURFACE.
+  SET vel_P TO XYZ_TO_PFRAME(vel, enu_axes).
+
+  local engine_facing is SHIP:ENGINES[0]:FACING.
+  set ship_axis to XYZ_TO_PFRAME(engine_facing:vector, GET_LH_ENU_AXES(r0)).
+  local v_trans is VXCL(vel_p, ship_axis).
+  local v_trans_mag is v_trans:MAG.
+  SET F_d_mag TO 0.5 * rho_atm * v_trans_mag * v_trans_mag * Cd_trans * AREA..
+  local minus_e_v_trans is -(v_trans:normalized).
+  local F_d is F_d_mag * minus_e_v_trans.
+  
+  local U is V(U_EAST, U_NORTH, U_UP) - F_d / (SHIP:MASS * 1000).
+
+  SET STEER_CMD TO PFRAME_TO_XYZ(U, enu_axes).          // 反向推力向量在世界坐标系下
+  LOCAL U_MAG IS U:mag.
 
   IF U_MAG <> U_MAG {
     SET LAST_THR_CMD TO 0.
@@ -250,10 +275,10 @@ FUNCTION SEND_STATE {
   SET MASS_WET TO STATE[9].
   LOCAL SEND_UP_M IS UP_M.
   LOCAL SEND_VU IS VU.
-  IF INFO_IN = "0" {
-    SET SEND_UP_M TO UP_M - MODE0_H.
-    SET SEND_VU TO -SQRT((VU * VU) + (2 * MODE0_A * MODE0_H)).
-  }.
+  //IF INFO_IN = "0" {
+  //  SET SEND_UP_M TO UP_M - (VU * MODE0_t + 0.5 * MODE0_A * MODE0_t * MODE0_t).
+  //  SET SEND_VU TO VU + (MODE0_A * MODE0_t).
+  //}.
   SET OUT_LINE TO INFO_IN + "," +
                 ROUND(SEND_UP_M + UP_BIAS_M,1) + "," +
                 ROUND(NORTH_M,1) + "," +
@@ -325,6 +350,11 @@ FUNCTION READ_SOLVER_OUTPUT {
 //  PRINT "recv_lines loop(ms)=" + loop_ms + " lines=" + RECV_LINES:LENGTH.
 
   IF HAS_FINISH = 1 {
+    IF RECOMPUTE_BEGIN_TIME >= 0 {
+      SET RECOMPUTE_TIME TO TIME:SECONDS - RECOMPUTE_BEGIN_TIME.
+      PRINT "recompute_time=" + ROUND(RECOMPUTE_TIME,4).
+      SET RECOMPUTE_BEGIN_TIME TO -1.
+    }.
     IF FINISH_CODE = 2 {
       SET RECOMPUTE_ENABLED TO 0.
       SET RECOMPUTE_PENDING TO 0.
@@ -461,13 +491,15 @@ FUNCTION MAIN_TICK {
 
   // On first tick, send initial mode1 config.
   IF LOOP_INDEX = 0 AND RECOMPUTE_ENABLED = 1 {
+    SET RECOMPUTE_BEGIN_TIME TO TIME:SECONDS.
     SEND_STATE("1").
     SET RECOMPUTE_PENDING TO 1.
   }.
 
   // Periodic recompute trigger based on elapsed time.
-  IF RECOMPUTE_ENABLED = 1 AND RECOMPUTE_PENDING = 0 AND (ELAPSED_SEC - LAST_RECOMPUTE_TIME) >= RECOMPUTE_TIME {
+  IF RECOMPUTE_ENABLED = 1 AND RECOMPUTE_PENDING = 0 AND (ELAPSED_SEC - LAST_RECOMPUTE_TIME) >= RECOMPUTE_INTERVAL {
 //    PRINT "RECOMPUTE_TRIGGER t=" + ROUND(ELAPSED_SEC,2).
+    SET RECOMPUTE_BEGIN_TIME TO TIME:SECONDS.
     SEND_STATE("1").
     SET RECOMPUTE_PENDING TO 1.
     SET LAST_RECOMPUTE_TIME TO ELAPSED_SEC.
@@ -505,7 +537,9 @@ FUNCTION PRINT_TICK {
   PRINT "u=" + ROUND(U_MAG,2).
   PRINT "speed=" + ROUND(SPEED,2).
   PRINT "remain_tf=" + ROUND(REMAIN_TF,3).
+  PRINT "recompute_time=" + ROUND(RECOMPUTE_TIME,4).
   PRINT "mass=" + ROUND(SHIP:MASS,3).
+  PRINT "F_d=" + ROUND(F_d_mag,2).
 }
 
 // ===== Schedule tick via WHEN =====
