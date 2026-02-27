@@ -5,42 +5,39 @@
 #include <cmath>
 #include <limits>
 #include <optional>
-
-extern "C" {
-#include "cpg_workspace.h"
-#include "cpg_solve.h"
-}
+#include <utility>
 
 SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int iters, bool save_last_traj) {
     using clock = std::chrono::steady_clock;
     auto t0 = clock::now();
 
     SearchResult res;
-    constexpr double kThrottleSwitchTf = 5.0;
-    constexpr double kThrottleMaxShortTf = 1.0;
-    constexpr double kGlideSlopeShortTfDeg = 90.0;
 
     GFOLDSolver solver(cfg_in);
     const int steps = cfg_in.steps;
 
     auto capture_last_traj = [&]() {
-        double* rx = CPG_Result.prim->r;
-        double* ry = CPG_Result.prim->r + steps;
-        double* rz = CPG_Result.prim->r + 2 * steps;
-        double* vx = CPG_Result.prim->v;
-        double* vy = CPG_Result.prim->v + steps;
-        double* vz = CPG_Result.prim->v + 2 * steps;
-        double* z = CPG_Result.prim->z;
+        GFOLDSolution sol = solver.solution();
+        if (sol.steps != steps ||
+            static_cast<int>(sol.rx.size()) != steps ||
+            static_cast<int>(sol.ry.size()) != steps ||
+            static_cast<int>(sol.rz.size()) != steps ||
+            static_cast<int>(sol.vx.size()) != steps ||
+            static_cast<int>(sol.vy.size()) != steps ||
+            static_cast<int>(sol.vz.size()) != steps ||
+            static_cast<int>(sol.z.size()) != steps) {
+            return;
+        }
 
-        res.last_rx.assign(rx, rx + steps);
-        res.last_ry.assign(ry, ry + steps);
-        res.last_rz.assign(rz, rz + steps);
-        res.last_vx.assign(vx, vx + steps);
-        res.last_vy.assign(vy, vy + steps);
-        res.last_vz.assign(vz, vz + steps);
+        res.last_rx = std::move(sol.rx);
+        res.last_ry = std::move(sol.ry);
+        res.last_rz = std::move(sol.rz);
+        res.last_vx = std::move(sol.vx);
+        res.last_vy = std::move(sol.vy);
+        res.last_vz = std::move(sol.vz);
         res.last_m_traj.resize(steps);
         for (int i = 0; i < steps; ++i) {
-            res.last_m_traj[i] = std::exp(z[i]);
+            res.last_m_traj[i] = std::exp(sol.z[i]);
         }
         res.has_last_traj = true;
     };
@@ -49,13 +46,13 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
         res.solve_calls++;
         GFOLDConfig trial = cfg_in;
         trial.tf = x;
-        trial.throttle_max = (x < kThrottleSwitchTf) ? kThrottleMaxShortTf : cfg_in.throttle_max;
-        trial.glide_slope_deg = (x < kThrottleSwitchTf) ? kGlideSlopeShortTfDeg : cfg_in.glide_slope_deg;
+        trial.throttle_max = cfg_in.throttle_max;
+        trial.glide_slope_deg = cfg_in.glide_slope_deg;
         solver.set_config(trial);
         if (!solver.solve()) return -std::numeric_limits<double>::infinity(); // infeasible
 
-        const int last_idx = steps - 1;
-        const double mass = std::exp(CPG_Result.prim->z[last_idx]);
+        const double mass = solver.terminal_mass();
+        if (mass != mass) return -std::numeric_limits<double>::infinity();
         if (save_last_traj) {
             // Overwrite with the latest feasible iterate trajectory.
             capture_last_traj();

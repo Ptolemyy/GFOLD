@@ -82,16 +82,15 @@ static void ensure_python_interpreter() {
     }
 }
 
-void plot_recv_mode0_from_csv(
-    const std::string& recv_csv,
-    const std::string& mode0_csv,
+void plot_full_run_from_csv(
+    const std::string& recv_r_csv,
+    const std::string& mode0_r_csv,
     const std::string& recv_vel_csv) {
-    const XYZSeries recv = load_xyz_csv(recv_csv);
-    const XYZSeries mode0 = load_xyz_csv(mode0_csv);
+    const XYZSeries recv = load_xyz_csv(recv_r_csv);
+    const XYZSeries mode0 = load_xyz_csv(mode0_r_csv);
     const ENUVelSeries vel = load_v_enu_t_csv(recv_vel_csv);
 
     ensure_python_interpreter();
-    py::module_::import("matplotlib.pyplot").attr("close")("all");
     auto plt = matplotlibcpp17::pyplot::import();
     auto fig = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(11, 10)));
     auto ax = fig.add_subplot(Args(2, 1, 1), Kwargs("projection"_a = "3d"));
@@ -142,6 +141,95 @@ void plot_recv_mode0_from_csv(
             const double zspan = zmax - zmin;
             const double half = 0.5 * std::max({xspan, yspan, zspan, 1e-6});
 
+            ax.set_xlim(Args(xmid - half, xmid + half));
+            ax.set_ylim(Args(ymid - half, ymid + half));
+            ax.set_zlim(Args(zmid - half, zmid + half));
+        }
+    }
+
+    ax.set_xlabel(Args("Up"));
+    ax.set_ylabel(Args("North"));
+    ax.set_zlabel(Args("East"));
+    ax.set_title(Args("Full Run: Received R and Mode0 Trajectory"));
+    ax.grid(Args(true));
+    ax.legend();
+
+    auto ax2 = fig.add_subplot(Args(2, 1, 2));
+    if (!vel.t.empty()) {
+        ax2.plot(Args(vel.t, vel.vu), Kwargs("label"_a = "v_up", "linewidth"_a = 1.8, "color"_a = "tab:red"));
+        ax2.plot(Args(vel.t, vel.vn), Kwargs("label"_a = "v_north", "linewidth"_a = 1.8, "color"_a = "tab:green"));
+        ax2.plot(Args(vel.t, vel.ve), Kwargs("label"_a = "v_east", "linewidth"_a = 1.8, "color"_a = "tab:purple"));
+    }
+    ax2.set_title(Args("Full Run: Recv ENU Velocity vs Time"));
+    ax2.set_xlabel(Args("t (s)"));
+    ax2.set_ylabel(Args("v (m/s)"));
+    ax2.grid(Args(true));
+    ax2.legend();
+
+    plt.show();
+}
+
+void plot_post_fail_compare_from_csv(
+    const std::string& recv_r_csv,
+    const std::string& last_traj_r_csv,
+    const std::string& recv_vel_csv,
+    const std::string& last_traj_vel_csv) {
+    const XYZSeries recv = load_xyz_csv(recv_r_csv);
+    const XYZSeries last_traj = load_xyz_csv(last_traj_r_csv);
+    const ENUVelSeries recv_vel = load_v_enu_t_csv(recv_vel_csv);
+    const ENUVelSeries last_vel = load_v_enu_t_csv(last_traj_vel_csv);
+
+    ensure_python_interpreter();
+    auto plt = matplotlibcpp17::pyplot::import();
+    auto fig = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(11, 10)));
+    auto ax = fig.add_subplot(Args(2, 1, 1), Kwargs("projection"_a = "3d"));
+
+    if (!recv.x.empty()) {
+        ax.plot(Args(recv.x, recv.y, recv.z),
+                Kwargs("label"_a = "recv after fail", "linewidth"_a = 2.0, "color"_a = "tab:orange"));
+    }
+    if (!last_traj.x.empty()) {
+        ax.plot(Args(last_traj.x, last_traj.y, last_traj.z),
+                Kwargs("label"_a = "last_traj", "linewidth"_a = 2.2, "linestyle"_a = "--", "color"_a = "tab:blue"));
+    }
+
+    bool has_any = !last_traj.x.empty() || !recv.x.empty();
+    if (has_any) {
+        double xmin = 0.0, xmax = 0.0;
+        double ymin = 0.0, ymax = 0.0;
+        double zmin = 0.0, zmax = 0.0;
+        bool inited = false;
+
+        auto update_bounds = [&](const XYZSeries& s) {
+            for (size_t i = 0; i < s.x.size(); ++i) {
+                if (!inited) {
+                    xmin = xmax = s.x[i];
+                    ymin = ymax = s.y[i];
+                    zmin = zmax = s.z[i];
+                    inited = true;
+                } else {
+                    xmin = std::min(xmin, s.x[i]);
+                    xmax = std::max(xmax, s.x[i]);
+                    ymin = std::min(ymin, s.y[i]);
+                    ymax = std::max(ymax, s.y[i]);
+                    zmin = std::min(zmin, s.z[i]);
+                    zmax = std::max(zmax, s.z[i]);
+                }
+            }
+        };
+
+        update_bounds(last_traj);
+        update_bounds(recv);
+
+        if (inited) {
+            const double xmid = 0.5 * (xmin + xmax);
+            const double ymid = 0.5 * (ymin + ymax);
+            const double zmid = 0.5 * (zmin + zmax);
+            const double xspan = xmax - xmin;
+            const double yspan = ymax - ymin;
+            const double zspan = zmax - zmin;
+            const double half = 0.5 * std::max({xspan, yspan, zspan, 1e-6});
+
             // Fix limits/aspect so matplotlib does not auto-rescale axes differently.
             ax.set_xlim(Args(xmid - half, xmid + half));
             ax.set_ylim(Args(ymid - half, ymid + half));
@@ -152,17 +240,22 @@ void plot_recv_mode0_from_csv(
     ax.set_xlabel(Args("Up"));
     ax.set_ylabel(Args("North"));
     ax.set_zlabel(Args("East"));
-    ax.set_title(Args("Received R and Mode0 Trajectory"));
+    ax.set_title(Args("R 3D: recv after fail vs last_traj"));
     ax.grid(Args(true));
     ax.legend();
 
     auto ax2 = fig.add_subplot(Args(2, 1, 2));
-    if (!vel.t.empty()) {
-        ax2.plot(Args(vel.t, vel.vu), Kwargs("label"_a = "v_up", "linewidth"_a = 1.8, "color"_a = "tab:red"));
-        ax2.plot(Args(vel.t, vel.vn), Kwargs("label"_a = "v_north", "linewidth"_a = 1.8, "color"_a = "tab:green"));
-        ax2.plot(Args(vel.t, vel.ve), Kwargs("label"_a = "v_east", "linewidth"_a = 1.8, "color"_a = "tab:purple"));
+    if (!recv_vel.t.empty()) {
+        ax2.plot(Args(recv_vel.t, recv_vel.vu), Kwargs("label"_a = "recv_v_x", "linewidth"_a = 1.8, "alpha"_a = 0.8, "color"_a = "tab:red"));
+        ax2.plot(Args(recv_vel.t, recv_vel.vn), Kwargs("label"_a = "recv_v_y", "linewidth"_a = 1.8, "alpha"_a = 0.8, "color"_a = "tab:green"));
+        ax2.plot(Args(recv_vel.t, recv_vel.ve), Kwargs("label"_a = "recv_v_z", "linewidth"_a = 1.8, "alpha"_a = 0.8, "color"_a = "tab:blue"));
     }
-    ax2.set_title(Args("Recv ENU Velocity vs Time"));
+    if (!last_vel.t.empty()) {
+        ax2.plot(Args(last_vel.t, last_vel.vu), Kwargs("label"_a = "last_v_x", "linewidth"_a = 2.0, "linestyle"_a = "--", "color"_a = "tab:red"));
+        ax2.plot(Args(last_vel.t, last_vel.vn), Kwargs("label"_a = "last_v_y", "linewidth"_a = 2.0, "linestyle"_a = "--", "color"_a = "tab:green"));
+        ax2.plot(Args(last_vel.t, last_vel.ve), Kwargs("label"_a = "last_v_z", "linewidth"_a = 2.0, "linestyle"_a = "--", "color"_a = "tab:blue"));
+    }
+    ax2.set_title(Args("v_x v_y v_z vs t"));
     ax2.set_xlabel(Args("t (s)"));
     ax2.set_ylabel(Args("v (m/s)"));
     ax2.grid(Args(true));

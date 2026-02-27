@@ -9,12 +9,8 @@
 #include <iostream>
 
 #include <pybind11/embed.h>
+#include <matplotlibcpp17/mplot3d.h>
 #include <matplotlibcpp17/pyplot.h>
-
-extern "C" {
-#include "cpg_workspace.h"
-#include "cpg_solve.h"
-}
 
 namespace py = pybind11;
 
@@ -26,7 +22,9 @@ static std::optional<double> eval_m(GFOLDSolver& solver, GFOLDConfig& cfg, doubl
     if (!solver.solve()) {
         return std::nullopt;
     }
-    return std::exp(CPG_Result.prim->z[cfg.steps - 1]);
+    const double m = solver.terminal_mass();
+    if (m == m) return m;
+    return std::nullopt;
 }
 
 // Coarse scan to find feasible bracket and best m(tf) sample.
@@ -150,71 +148,32 @@ static std::pair<double,double> golden_maximize(
     return {best_tf, best_m};
 }
 
-// Compute thrust profile from current CPG_Result.
-static void compute_thrust_profiles(
-    double tf,
-    int steps,
-    std::vector<double>& t,
-    std::vector<double>& Th,
-    std::vector<double>& u_angle_deg)
-{
-    t.clear(); Th.clear(); u_angle_deg.clear();
-    t.reserve(steps); Th.reserve(steps); u_angle_deg.reserve(steps);
-
-    double* ux = CPG_Result.prim->u;
-    double* uy = CPG_Result.prim->u + steps;
-    double* uz = CPG_Result.prim->u + 2 * steps;
-    double* z  = CPG_Result.prim->z;
-
-    const double dt = tf / steps;
-    const double RAD2DEG = 180.0 / M_PI;
-
-    for (int i = 0; i < steps; ++i) {
-        double vx = ux[i];
-        double vy = uy[i];
-        double vz = uz[i];
-        double m = std::exp(z[i]);
-        double norm_u = std::sqrt(vx * vx + vy * vy + vz * vz);
-        Th.push_back(norm_u * m);
-
-        double cos_val = 1.0;
-        if (norm_u > 0.0) {
-            cos_val = vx / norm_u;
-            cos_val = std::min(1.0, std::max(-1.0, cos_val));
-        }
-        double angle_rad = std::acos(cos_val);
-        u_angle_deg.push_back(angle_rad * RAD2DEG);
-
-        t.push_back(i * dt);
-    }
-}
-
 int main()
 {
     // Problem setup: copy from main.cpp
     GFOLDConfig cfg;
-    cfg.steps = 100;
-    cfg.tf = 57.29;
-    cfg.g0 = 3.71;
-    cfg.Isp = 2000.0/3.71;
-    cfg.T_max = 24000.0;
-    cfg.throttle_min = 0.2;
-    cfg.throttle_max = 0.8;
-    cfg.m0 = 2000.0;
-    cfg.r0[0] = 2400.00000;
-    cfg.r0[1] = 450.00000;
-    cfg.r0[2] = -330.00000;
-    cfg.v0[0] = -10.0000;
-    cfg.v0[1] = -40.00;
-    cfg.v0[2] = 10.0000;
-    cfg.glide_slope_deg = 30.0;
-    cfg.max_angle_deg = 45.0;
+    cfg.steps = 10;
+    cfg.tf = 2.728452;
+    cfg.g0 = 9.810000;
+    cfg.Isp = 252.085000;
+    cfg.T_max = 169370.000000;
+    cfg.throttle_min = 0.300000;
+    cfg.throttle_max = 1.000000;
+    cfg.m0 = 5481.000000;
+    cfg.r0[0] = 53.900000;
+    cfg.r0[1] = -0.200000;
+    cfg.r0[2] = 0.000000;
+    cfg.v0[0] = -42.560000;
+    cfg.v0[1] = 0.070000;
+    cfg.v0[2] = -6.220000;
+    cfg.glide_slope_deg = 30.000000;
+    cfg.max_angle_deg = 20.000000;
 
     GFOLDSolver solver(cfg);
 
-    const double tf_min  = 30.0;
-    const double tf_max  = 100.0;
-    const double tf_step = 1;
+    const double tf_min  = 1.0;
+    const double tf_max  = 6.0;
+    const double tf_step = 0.1;
 
     Bracket br = coarse_bracket(solver, cfg, tf_min, tf_max, tf_step);
     if (br.ms.empty()) {
@@ -237,8 +196,8 @@ int main()
         return 0;
     }
 
-    std::vector<double> t, Th, u_angle;
-    compute_thrust_profiles(best_tf, cfg.steps, t, Th, u_angle);
+    GFOLDThrustProfile prof = solver.compute_thrust_profile();
+    GFOLDSolution sol = solver.solution();
 
     py::scoped_interpreter guard{};
     auto plt = matplotlibcpp17::pyplot::import();
@@ -256,22 +215,42 @@ int main()
     ax1.grid(Args(true));
 
     auto ax4 = fig.add_subplot(Args(6, 1, 4));
-    ax4.plot(Args(t, Th), Kwargs("color"_a = "blue"));
+    ax4.plot(Args(prof.t, prof.thrust_N), Kwargs("color"_a = "blue"));
 
     double y1 = cfg.T_max * cfg.throttle_max;
     double y2 = cfg.T_max * cfg.throttle_min;
 
-    ax4.plot(Args(t, std::vector<double>(t.size(), y1)),
+    ax4.plot(Args(prof.t, std::vector<double>(prof.t.size(), y1)),
              Kwargs("linestyle"_a="--", "color"_a="red"));
-    ax4.plot(Args(t, std::vector<double>(t.size(), y2)),
+    ax4.plot(Args(prof.t, std::vector<double>(prof.t.size(), y2)),
              Kwargs("linestyle"_a="--", "color"_a="red"));
     ax4.set_title(Args("Thrust (N)"));
 
     auto ax5 = fig.add_subplot(Args(6, 1, 5));
-    ax5.plot(Args(t, std::vector<double>(t.size(), cfg.max_angle_deg)),
+    ax5.plot(Args(prof.t, std::vector<double>(prof.t.size(), cfg.max_angle_deg)),
              Kwargs("linestyle"_a="--", "color"_a="red"));
-    ax5.plot(Args(t, u_angle), Kwargs("color"_a="blue"));
+    ax5.plot(Args(prof.t, prof.angle_deg), Kwargs("color"_a="blue"));
     ax5.set_title(Args("Thrust angle (deg)"));
+
+    if (sol.steps > 0 &&
+        static_cast<int>(sol.rx.size()) == sol.steps &&
+        static_cast<int>(sol.ry.size()) == sol.steps &&
+        static_cast<int>(sol.rz.size()) == sol.steps) {
+        auto fig_r = plt.figure(
+            Args(),
+            Kwargs("figsize"_a = py::make_tuple(8, 6))
+        );
+        auto axr = fig_r.add_subplot(Args(1, 1, 1), Kwargs("projection"_a = "3d"));
+        axr.plot(Args(sol.rx, sol.ry, sol.rz),
+                 Kwargs("color"_a = "tab:blue", "linewidth"_a = 2.0));
+        axr.set_title(Args("R 3D Trajectory"));
+        axr.set_xlabel(Args("Up (x)"));
+        axr.set_ylabel(Args("North (y)"));
+        axr.set_zlabel(Args("East (z)"));
+        axr.grid(Args(true));
+    } else {
+        std::cout << "Skip R 3D plot: invalid r trajectory.\n";
+    }
 
     plt.show();
     return 0;

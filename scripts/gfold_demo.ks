@@ -20,14 +20,16 @@ SET DEPLOY_GEAR_TIME TO 8.0. // deploy gear when remain_tf <= this value
 
 SET CYL_HEIGHT TO 3.8.
 SET CYL_RADIUS TO 1.3.
-SET Cd_trans TO 5.0.
+SET Cd_trans TO 4.81.
+set cd_axis to 0.0445.
 SET rho_atm TO 1.139.
 
-SET AREA TO CONSTANT:PI * CYL_HEIGHT * CYL_RADIUS / 2 + 10.
+SET AREA_trans TO CONSTANT:PI * CYL_HEIGHT * CYL_RADIUS / 2 + 15.
+SET AREA_axis TO 1.63.
 // ===== Optional config override =====
 // Provide a config.txt in the same directory with lines like:
-//   SET LAT0 TO -0.0972.
-//   SET LON0 TO -74.5577.  LAUNCHPAD
+//   SET LAT0 TO -0.096779520816.
+//   SET LON0 TO -74.617401641155.  LAUNCHPAD
 //   SET ALT0 TO 0.
 //   SET THROT1 TO 0.2.
 //   SET THROT2 TO 0.8.
@@ -36,8 +38,8 @@ SET AREA TO CONSTANT:PI * CYL_HEIGHT * CYL_RADIUS / 2 + 10.
 //   SET MODE0_H TO 3.5.
 //   SET MODE0_A TO 9.8.  
 
-//   SET LAT0 TO -0.09694444.
-//   SET LON0 TO -74.617. VAB
+//   SET LAT0 TO -0.096706.
+//   SET LON0 TO -74.618806. VAB
 SET CONFIG_FILE TO "config.txt".
 IF EXISTS(CONFIG_FILE) { RUNPATH(CONFIG_FILE). }.
 
@@ -79,7 +81,8 @@ SET LAST_U_TICK TO 0.
 SET LAST_PRINT_TICK TO 0.
 SET RUN_ACTIVE TO 1.
 SET GEAR_DEPLOYED TO 0.      // one-shot landing gear deploy latch
-SET F_d_mag TO 0.0.
+SET F_d_trans_mag TO 0.0.
+SET F_d_axis_mag TO 0.0.
 
 SET CONFIG:ipu TO 2000.
 
@@ -217,15 +220,21 @@ FUNCTION APPLY_THRUST {
   SET vel TO SHIP:VELOCITY:SURFACE.
   SET vel_P TO XYZ_TO_PFRAME(vel, enu_axes).
 
-  local engine_facing is SHIP:ENGINES[0]:FACING.
+  local engine_facing is SHIP:ENGINES[0]:FACING. //trans F drag
   set ship_axis to XYZ_TO_PFRAME(engine_facing:vector, GET_LH_ENU_AXES(r0)).
   local v_trans is VXCL(vel_p, ship_axis).
   local v_trans_mag is v_trans:MAG.
-  SET F_d_mag TO 0.5 * rho_atm * v_trans_mag * v_trans_mag * Cd_trans * AREA..
+  SET F_d_trans_mag TO 0.5 * rho_atm * v_trans_mag * v_trans_mag * Cd_trans * AREA_trans.
   local minus_e_v_trans is -(v_trans:normalized).
-  local F_d is F_d_mag * minus_e_v_trans.
+  local F_d_trans is F_d_trans_mag * minus_e_v_trans.
   
-  local U is V(U_EAST, U_NORTH, U_UP) - F_d / (SHIP:MASS * 1000).
+  local v_axis is VDOT(vel_p, ship_axis) / (ship_axis:SQRMAGNITUDE) * ship_axis. // F_d_axis drag
+  local v_axis_mag is v_axis:MAG.
+  SET F_d_axis_mag TO 0.5 * rho_atm * v_axis_mag * v_axis_mag * Cd_axis * AREA_axis.
+  local minus_e_v_axis is -(v_axis:normalized).
+  local F_d_axis is F_d_axis_mag * minus_e_v_axis.
+  
+  local U is V(U_EAST, U_NORTH, U_UP) - F_d_trans / (SHIP:MASS * 1000) - F_d_axis / (SHIP:MASS * 1000).
 
   SET STEER_CMD TO PFRAME_TO_XYZ(U, enu_axes).          // 反向推力向量在世界坐标系下
   LOCAL U_MAG IS U:mag.
@@ -539,7 +548,7 @@ FUNCTION PRINT_TICK {
   PRINT "remain_tf=" + ROUND(REMAIN_TF,3).
   PRINT "recompute_time=" + ROUND(RECOMPUTE_TIME,4).
   PRINT "mass=" + ROUND(SHIP:MASS,3).
-  PRINT "F_d=" + ROUND(F_d_mag,2).
+  PRINT "F_d_trans=" + ROUND(F_d_trans_mag,2).
 }
 
 // ===== Schedule tick via WHEN =====

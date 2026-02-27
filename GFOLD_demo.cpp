@@ -18,16 +18,17 @@
 #include <thread>
 #include <vector>
 
-extern "C" {
-#include "cpg_workspace.h"
-}
-
 namespace fs = std::filesystem;
 using namespace std::chrono_literals;
 
-void plot_recv_mode0_from_csv(
-    const std::string& recv_csv,
-    const std::string& mode0_csv,
+void plot_post_fail_compare_from_csv(
+    const std::string& recv_r_csv,
+    const std::string& last_traj_r_csv,
+    const std::string& recv_vel_csv,
+    const std::string& last_traj_vel_csv);
+void plot_full_run_from_csv(
+    const std::string& recv_r_csv,
+    const std::string& mode0_r_csv,
     const std::string& recv_vel_csv);
 
 static std::string read_last_line(const fs::path& p) {
@@ -224,6 +225,20 @@ static bool write_tuvw_csv(const fs::path& out_path, const std::vector<std::arra
     return atomic_write(out_path, oss.str());
 }
 
+static bool write_tuvw_csv(const fs::path& out_path,
+                           const std::vector<double>& t,
+                           const std::vector<double>& u,
+                           const std::vector<double>& v,
+                           const std::vector<double>& w) {
+    if (t.size() != u.size() || t.size() != v.size() || t.size() != w.size()) return false;
+    std::ostringstream oss;
+    oss << std::setprecision(10) << std::fixed;
+    for (size_t i = 0; i < t.size(); ++i) {
+        oss << t[i] << "," << u[i] << "," << v[i] << "," << w[i] << "\n";
+    }
+    return atomic_write(out_path, oss.str());
+}
+
 static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDConfig& cfg, double* base_time_out) {
     // Expect at least: MODE,E,N,U,VE,VN,VU,SPEED,THRUST_MAX,ISP,MASS_WET
     if (tok.size() < 11) return false;
@@ -333,8 +348,8 @@ static void apply_tf_rules(
     GFOLDConfig& cfg,
     double nominal_throttle_max,
     double nominal_glide_slope_deg) {
-    cfg.throttle_max = (cfg.tf < 5.0) ? 1.0 : nominal_throttle_max;
-    cfg.glide_slope_deg = (cfg.tf < 5.0) ? 90.0 : nominal_glide_slope_deg;
+    cfg.throttle_max = nominal_throttle_max;
+    cfg.glide_slope_deg = nominal_glide_slope_deg;
 }
 
 static void log_mode1_cfg(const GFOLDConfig& cfg) {
@@ -383,13 +398,27 @@ int main() {
     bool fallback_enabled = true;
     bool mode1_solver_enabled = true;
     TrajectoryCache last_traj;
+    double last_traj_solve_elapsed_sec = std::numeric_limits<double>::quiet_NaN();
+    bool has_fail_solver_cfg = false;
+    GFOLDConfig fail_solver_cfg;
+    double fail_solver_elapsed_sec = std::numeric_limits<double>::quiet_NaN();
+    std::string fail_solver_state;
+    std::string fail_fallback_state;
+    bool lock_last_traj_after_final_fail = false;
     std::vector<std::array<double, 3>> recv_r_points;
     std::vector<std::array<double, 4>> recv_v_enu_t_points;
+    std::vector<std::array<double, 7>> recv_info_rv_t_points;
+    bool post_fail_capture_active = false;
+    double post_fail_start_elapsed_sec = std::numeric_limits<double>::quiet_NaN();
+    double post_fail_recv_cut_elapsed_sec = std::numeric_limits<double>::quiet_NaN();
+    int post_fail_last_start_idx = -1;
+    std::vector<std::array<double, 3>> post_fail_recv_r_points;
+    std::vector<std::array<double, 4>> post_fail_recv_v_xyz_t_points;
     bool end_plot_launched = false;
     const std::vector<int> sample_gaps = {0, 1, 3, 4, 9};
     size_t sample_gap_mode = 0;
     constexpr int max_lines = 10;
-    constexpr double recompute_time = 1.5+0.3;
+    constexpr double recompute_time = 1.0+0.3;
     std::vector<InfoEndRvm> info_end_rvm_list;
 
     std::mutex queue_mu;
@@ -428,14 +457,21 @@ int main() {
         const IncomingType incoming = parse_incoming_type(tok[0]);
         if (incoming == IncomingType::Unknown) continue;
         std::array<double, 3> r_xyz{};
-        if (try_parse_r_xyz(tok, r_xyz)) {
+        const bool has_r_xyz = try_parse_r_xyz(tok, r_xyz);
+        if (has_r_xyz) {
             recv_r_points.push_back(r_xyz);
         }
         std::array<double, 4> v_enu_t{};
-        if (try_parse_v_enu_t(tok, v_enu_t)) {
+        const bool has_v_enu_t = try_parse_v_enu_t(tok, v_enu_t);
+        if (has_v_enu_t) {
             recv_v_enu_t_points.push_back(v_enu_t);
         }
         if (incoming == IncomingType::Info || incoming == IncomingType::End) {
+            if (has_r_xyz && has_v_enu_t) {
+                recv_info_rv_t_points.push_back({
+                    v_enu_t[0], r_xyz[0], r_xyz[1], r_xyz[2], v_enu_t[1], v_enu_t[2], v_enu_t[3]
+                });
+            }
             InfoEndRvm sample;
             (void)parse_info_end_rvm(tok, sample);
             info_end_rvm_list.push_back(sample);
@@ -506,17 +542,139 @@ int main() {
                     std::cout << " landing_t=n/a";
                 }
                 std::cout << "\n";
-
-                const fs::path recv_csv = "plot_recv_r.csv";
-                const fs::path mode0_csv = "plot_mode0_r.csv";
-                const fs::path recv_vel_csv = "plot_recv_v_enu_t.csv";
-                const bool ok_recv = write_xyz_csv(recv_csv, recv_r_points);
-                const bool ok_mode0 = write_xyz_csv(mode0_csv, mode0_last_rx, mode0_last_ry, mode0_last_rz);
-                const bool ok_recv_vel = write_tuvw_csv(recv_vel_csv, recv_v_enu_t_points);
-                if (ok_recv && ok_mode0 && ok_recv_vel) {
-                    plot_recv_mode0_from_csv(recv_csv.string(), mode0_csv.string(), recv_vel_csv.string());
-                    end_plot_launched = true;
+                if (has_fail_solver_cfg) {
+                    std::cout << "[end] fail_cfg"
+                              << " elapsed=" << fail_solver_elapsed_sec
+                              << " solver=" << fail_solver_state
+                              << " fallback=" << fail_fallback_state
+                              << " tf=" << fail_solver_cfg.tf
+                              << " g0=" << fail_solver_cfg.g0
+                              << " Isp=" << fail_solver_cfg.Isp
+                              << " T_max=" << fail_solver_cfg.T_max
+                              << " throt=[" << fail_solver_cfg.throttle_min << "," << fail_solver_cfg.throttle_max << "]"
+                              << " m0=" << fail_solver_cfg.m0
+                              << " r0=[" << fail_solver_cfg.r0[0] << "," << fail_solver_cfg.r0[1] << "," << fail_solver_cfg.r0[2] << "]"
+                              << " v0=[" << fail_solver_cfg.v0[0] << "," << fail_solver_cfg.v0[1] << "," << fail_solver_cfg.v0[2] << "]"
+                              << " glide=" << fail_solver_cfg.glide_slope_deg
+                              << " theta=" << fail_solver_cfg.max_angle_deg
+                              << " steps=" << fail_solver_cfg.steps
+                              << "\n";
+                } else {
+                    std::cout << "[end] fail_cfg n/a\n";
                 }
+
+                bool any_plot_launched = false;
+                {
+                    const fs::path recv_csv = "plot_recv_r.csv";
+                    const fs::path mode0_csv = "plot_mode0_r.csv";
+                    const fs::path recv_vel_csv = "plot_recv_v_enu_t.csv";
+                    const bool ok_recv = write_xyz_csv(recv_csv, recv_r_points);
+                    const bool ok_mode0 = write_xyz_csv(mode0_csv, mode0_last_rx, mode0_last_ry, mode0_last_rz);
+                    const bool ok_recv_vel = write_tuvw_csv(recv_vel_csv, recv_v_enu_t_points);
+                    if (ok_recv && ok_mode0 && ok_recv_vel) {
+                        plot_full_run_from_csv(recv_csv.string(), mode0_csv.string(), recv_vel_csv.string());
+                        any_plot_launched = true;
+                    }
+                }
+
+                if (post_fail_capture_active &&
+                    std::isfinite(post_fail_start_elapsed_sec) &&
+                    std::isfinite(post_fail_recv_cut_elapsed_sec)) {
+                    post_fail_recv_r_points.clear();
+                    post_fail_recv_v_xyz_t_points.clear();
+                    constexpr double kTimeEps = 1e-9;
+                    for (const auto& p : recv_info_rv_t_points) {
+                        const double t_abs = p[0];
+                        if (t_abs + kTimeEps < post_fail_recv_cut_elapsed_sec) continue;
+                        post_fail_recv_r_points.push_back({p[1], p[2], p[3]});
+                        post_fail_recv_v_xyz_t_points.push_back({
+                            t_abs - post_fail_start_elapsed_sec, p[4], p[5], p[6]
+                        });
+                    }
+                    if (post_fail_recv_r_points.empty()) {
+                        for (const auto& p : recv_info_rv_t_points) {
+                            const double t_abs = p[0];
+                            if (t_abs + kTimeEps < post_fail_start_elapsed_sec) continue;
+                            post_fail_recv_r_points.push_back({p[1], p[2], p[3]});
+                            post_fail_recv_v_xyz_t_points.push_back({
+                                t_abs - post_fail_start_elapsed_sec, p[4], p[5], p[6]
+                            });
+                        }
+                        if (!post_fail_recv_r_points.empty()) {
+                            std::cout << "[end] post-fail recv fallback: no samples after strict cut, use solver-start cut\n";
+                        }
+                    }
+                }
+
+                std::vector<double> post_fail_plot_last_rx;
+                std::vector<double> post_fail_plot_last_ry;
+                std::vector<double> post_fail_plot_last_rz;
+                std::vector<double> post_fail_plot_last_vx;
+                std::vector<double> post_fail_plot_last_vy;
+                std::vector<double> post_fail_plot_last_vz;
+                std::vector<double> post_fail_plot_last_t;
+                if (post_fail_capture_active &&
+                    post_fail_last_start_idx >= 0 &&
+                    last_traj.valid &&
+                    last_traj.steps > 0 &&
+                    last_traj.tf > 0.0 &&
+                    post_fail_last_start_idx < last_traj.steps &&
+                    static_cast<int>(last_traj.rx.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.ry.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.rz.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.vx.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.vy.size()) == last_traj.steps &&
+                    static_cast<int>(last_traj.vz.size()) == last_traj.steps) {
+                    const int rem_steps = last_traj.steps - post_fail_last_start_idx;
+                    if (rem_steps > 0) {
+                        const double dt_prev = last_traj.tf / static_cast<double>(last_traj.steps);
+                        post_fail_plot_last_rx.assign(last_traj.rx.begin() + post_fail_last_start_idx, last_traj.rx.end());
+                        post_fail_plot_last_ry.assign(last_traj.ry.begin() + post_fail_last_start_idx, last_traj.ry.end());
+                        post_fail_plot_last_rz.assign(last_traj.rz.begin() + post_fail_last_start_idx, last_traj.rz.end());
+                        post_fail_plot_last_vx.assign(last_traj.vx.begin() + post_fail_last_start_idx, last_traj.vx.end());
+                        post_fail_plot_last_vy.assign(last_traj.vy.begin() + post_fail_last_start_idx, last_traj.vy.end());
+                        post_fail_plot_last_vz.assign(last_traj.vz.begin() + post_fail_last_start_idx, last_traj.vz.end());
+                        post_fail_plot_last_t.reserve(static_cast<size_t>(rem_steps));
+                        for (int i = 0; i < rem_steps; ++i) {
+                            post_fail_plot_last_t.push_back(static_cast<double>(post_fail_last_start_idx + i) * dt_prev);
+                        }
+                    }
+                }
+
+                const bool has_post_fail_data =
+                    !post_fail_recv_r_points.empty() &&
+                    !post_fail_recv_v_xyz_t_points.empty() &&
+                    !post_fail_plot_last_rx.empty() &&
+                    !post_fail_plot_last_ry.empty() &&
+                    !post_fail_plot_last_rz.empty() &&
+                    !post_fail_plot_last_t.empty() &&
+                    !post_fail_plot_last_vx.empty() &&
+                    !post_fail_plot_last_vy.empty() &&
+                    !post_fail_plot_last_vz.empty();
+                if (has_post_fail_data) {
+                    const fs::path recv_csv = "plot_post_fail_recv_r.csv";
+                    const fs::path last_traj_csv = "plot_post_fail_last_traj_r.csv";
+                    const fs::path recv_vel_csv = "plot_post_fail_recv_v_t.csv";
+                    const fs::path last_traj_vel_csv = "plot_post_fail_last_traj_v_t.csv";
+                    const bool ok_recv = write_xyz_csv(recv_csv, post_fail_recv_r_points);
+                    const bool ok_last = write_xyz_csv(
+                        last_traj_csv, post_fail_plot_last_rx, post_fail_plot_last_ry, post_fail_plot_last_rz);
+                    const bool ok_recv_vel = write_tuvw_csv(recv_vel_csv, post_fail_recv_v_xyz_t_points);
+                    const bool ok_last_vel = write_tuvw_csv(
+                        last_traj_vel_csv,
+                        post_fail_plot_last_t,
+                        post_fail_plot_last_vx,
+                        post_fail_plot_last_vy,
+                        post_fail_plot_last_vz);
+                    if (ok_recv && ok_last && ok_recv_vel && ok_last_vel) {
+                        plot_post_fail_compare_from_csv(
+                            recv_csv.string(), last_traj_csv.string(), recv_vel_csv.string(), last_traj_vel_csv.string());
+                        any_plot_launched = true;
+                    }
+                } else {
+                    std::cout << "[end] skip post-fail plot: missing fail-window data\n";
+                }
+                end_plot_launched = any_plot_launched;
             }
             continue;
         }
@@ -527,6 +685,7 @@ int main() {
             // A new mode0 request starts a fresh run; drop previous run history.
             recv_r_points.clear();
             recv_v_enu_t_points.clear();
+            recv_info_rv_t_points.clear();
             info_end_rvm_list.clear();
             end_plot_launched = false;
             has_mode0_best_m = false;
@@ -540,6 +699,18 @@ int main() {
             mode0_last_vy.clear();
             mode0_last_vz.clear();
             mode0_last_m_traj.clear();
+            has_fail_solver_cfg = false;
+            fail_solver_cfg = GFOLDConfig{};
+            fail_solver_elapsed_sec = std::numeric_limits<double>::quiet_NaN();
+            fail_solver_state.clear();
+            fail_fallback_state.clear();
+            lock_last_traj_after_final_fail = false;
+            post_fail_capture_active = false;
+            post_fail_start_elapsed_sec = std::numeric_limits<double>::quiet_NaN();
+            post_fail_recv_cut_elapsed_sec = std::numeric_limits<double>::quiet_NaN();
+            post_fail_last_start_idx = -1;
+            post_fail_recv_r_points.clear();
+            post_fail_recv_v_xyz_t_points.clear();
 
             GFOLDConfig cfg; // start with defaults
             cfg.tf = 60.0;   // placeholder; actual tf is searched over
@@ -590,6 +761,7 @@ int main() {
             fallback_enabled = true;
             mode1_solver_enabled = true;
             last_traj.valid = false;
+            last_traj_solve_elapsed_sec = std::numeric_limits<double>::quiet_NaN();
             sample_gap_mode = 0;
 
 //            std::cout << "[mode0] best_tf=" << res.best_tf
@@ -627,12 +799,12 @@ int main() {
             apply_tf_rules(cfg, nominal_throttle_max, nominal_glide_slope_deg);
             log_mode1_cfg(cfg);
 
+            GFOLDSolver solver(cfg);
             bool ok = false;
             std::string solver_state = "disabled";
             std::string fallback_state = "not_used";
             TrajectoryCache active_traj;
             if (mode1_solver_enabled) {
-                GFOLDSolver solver(cfg);
                 ok = solver.solve();
                 solver_state = ok ? "ok" : ("fail(" + std::to_string(solver.status()) + ")");
                 if (!ok) {
@@ -702,29 +874,72 @@ int main() {
 //                std::cout << "[mode1] solver disabled, reuse last trajectory\n";
             }
 
+            if (!ok &&
+                !post_fail_capture_active &&
+                !lock_last_traj_after_final_fail &&
+                last_traj.valid &&
+                last_traj.steps > 0 &&
+                last_traj.tf > 0.0 &&
+                static_cast<int>(last_traj.vx.size()) == last_traj.steps &&
+                static_cast<int>(last_traj.vy.size()) == last_traj.steps &&
+                static_cast<int>(last_traj.vz.size()) == last_traj.steps &&
+                static_cast<int>(last_traj.rx.size()) == last_traj.steps &&
+                static_cast<int>(last_traj.ry.size()) == last_traj.steps &&
+                static_cast<int>(last_traj.rz.size()) == last_traj.steps) {
+                const int start_idx = closest_prior_index_by_r(last_traj, cfg.r0);
+                if (start_idx >= 0 && start_idx < last_traj.steps) {
+                    const int rem_steps = last_traj.steps - start_idx;
+                    if (rem_steps > 0) {
+                        const double dt_prev = last_traj.tf / static_cast<double>(last_traj.steps);
+                        post_fail_last_start_idx = start_idx;
+
+                        post_fail_recv_r_points.clear();
+                        post_fail_recv_v_xyz_t_points.clear();
+                        post_fail_start_elapsed_sec =
+                            std::isfinite(last_traj_solve_elapsed_sec) ? last_traj_solve_elapsed_sec : base_time;
+                        post_fail_recv_cut_elapsed_sec =
+                            post_fail_start_elapsed_sec + (static_cast<double>(start_idx) * dt_prev);
+                        has_fail_solver_cfg = true;
+                        fail_solver_cfg = cfg;
+                        fail_solver_elapsed_sec = base_time;
+                        fail_solver_state = solver_state;
+                        fail_fallback_state = fallback_state;
+                        post_fail_capture_active = true;
+                        fallback_enabled = false;
+                        mode1_solver_enabled = false;
+                        lock_last_traj_after_final_fail = true;
+                    }
+                }
+            }
+
             if (ok) {
                 const int steps = cfg.steps;
-                double* ux = CPG_Result.prim->u;
-                double* uy = CPG_Result.prim->u + steps;
-                double* uz = CPG_Result.prim->u + 2 * steps;
-                double* vx = CPG_Result.prim->v;
-                double* vy = CPG_Result.prim->v + steps;
-                double* vz = CPG_Result.prim->v + 2 * steps;
-                double* rx = CPG_Result.prim->r;
-                double* ry = CPG_Result.prim->r + steps;
-                double* rz = CPG_Result.prim->r + 2 * steps;
+                GFOLDSolution sol = solver.solution();
+                if (sol.steps != steps ||
+                    static_cast<int>(sol.ux.size()) != steps ||
+                    static_cast<int>(sol.uy.size()) != steps ||
+                    static_cast<int>(sol.uz.size()) != steps ||
+                    static_cast<int>(sol.vx.size()) != steps ||
+                    static_cast<int>(sol.vy.size()) != steps ||
+                    static_cast<int>(sol.vz.size()) != steps ||
+                    static_cast<int>(sol.rx.size()) != steps ||
+                    static_cast<int>(sol.ry.size()) != steps ||
+                    static_cast<int>(sol.rz.size()) != steps) {
+                    write_compute_finish(recv_path, 2);
+                    continue;
+                }
 
                 active_traj.steps = steps;
                 active_traj.tf = cfg.tf;
-                active_traj.ux.assign(ux, ux + steps);
-                active_traj.uy.assign(uy, uy + steps);
-                active_traj.uz.assign(uz, uz + steps);
-                active_traj.vx.assign(vx, vx + steps);
-                active_traj.vy.assign(vy, vy + steps);
-                active_traj.vz.assign(vz, vz + steps);
-                active_traj.rx.assign(rx, rx + steps);
-                active_traj.ry.assign(ry, ry + steps);
-                active_traj.rz.assign(rz, rz + steps);
+                active_traj.ux = std::move(sol.ux);
+                active_traj.uy = std::move(sol.uy);
+                active_traj.uz = std::move(sol.uz);
+                active_traj.vx = std::move(sol.vx);
+                active_traj.vy = std::move(sol.vy);
+                active_traj.vz = std::move(sol.vz);
+                active_traj.rx = std::move(sol.rx);
+                active_traj.ry = std::move(sol.ry);
+                active_traj.rz = std::move(sol.rz);
                 active_traj.valid = true;
             } else {
                 const bool cache_ready =
@@ -747,7 +962,7 @@ int main() {
                     continue;
                 }
 
-                const int start_idx = closest_prior_index_by_v(last_traj, cfg.v0);
+                const int start_idx = closest_prior_index_by_r(last_traj, cfg.r0);
                 if (start_idx < 0 || start_idx >= last_traj.steps) {
 //                    std::cerr << "[mode1] invalid cached start_idx=" << start_idx << "\n";
                     write_compute_finish(recv_path, 2);
@@ -787,7 +1002,10 @@ int main() {
                 continue;
             }
 
-            last_traj = active_traj;
+            if (!lock_last_traj_after_final_fail) {
+                last_traj = active_traj;
+                last_traj_solve_elapsed_sec = base_time;
+            }
 
             const int steps = active_traj.steps;
             const double dt = active_traj.tf / static_cast<double>(steps);

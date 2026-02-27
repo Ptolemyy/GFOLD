@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
+#include <limits>
 
 extern "C" {
 #include "cpg_workspace.h"
@@ -76,6 +77,67 @@ bool GFOLDSolver::solve() {
 
 int GFOLDSolver::status() const {
     return CPG_Result.info ? CPG_Result.info->status : -999;
+}
+
+GFOLDSolverInfo GFOLDSolver::info() const {
+    GFOLDSolverInfo out;
+    if (!CPG_Result.info) return out;
+    out.status = CPG_Result.info->status;
+    out.iter = CPG_Result.info->iter;
+    out.obj_val = CPG_Result.info->obj_val;
+    out.pri_res = CPG_Result.info->pri_res;
+    out.dua_res = CPG_Result.info->dua_res;
+    return out;
+}
+
+GFOLDSolverLimits GFOLDSolver::limits() const {
+    GFOLDSolverLimits out;
+    out.feastol = Canon_Settings.feastol;
+    out.abstol = Canon_Settings.abstol;
+    out.reltol = Canon_Settings.reltol;
+    out.feastol_inacc = Canon_Settings.feastol_inacc;
+    out.abstol_inacc = Canon_Settings.abstol_inacc;
+    out.reltol_inacc = Canon_Settings.reltol_inacc;
+    out.maxit = Canon_Settings.maxit;
+    return out;
+}
+
+GFOLDSolution GFOLDSolver::solution() const {
+    GFOLDSolution out;
+    const int steps = cfg_.steps;
+    if (steps <= 0 || !CPG_Result.prim) return out;
+    out.steps = steps;
+
+    double* ux = CPG_Result.prim->u;
+    double* uy = CPG_Result.prim->u + steps;
+    double* uz = CPG_Result.prim->u + 2 * steps;
+    double* vx = CPG_Result.prim->v;
+    double* vy = CPG_Result.prim->v + steps;
+    double* vz = CPG_Result.prim->v + 2 * steps;
+    double* rx = CPG_Result.prim->r;
+    double* ry = CPG_Result.prim->r + steps;
+    double* rz = CPG_Result.prim->r + 2 * steps;
+    double* z = CPG_Result.prim->z;
+
+    out.ux.assign(ux, ux + steps);
+    out.uy.assign(uy, uy + steps);
+    out.uz.assign(uz, uz + steps);
+    out.vx.assign(vx, vx + steps);
+    out.vy.assign(vy, vy + steps);
+    out.vz.assign(vz, vz + steps);
+    out.rx.assign(rx, rx + steps);
+    out.ry.assign(ry, ry + steps);
+    out.rz.assign(rz, rz + steps);
+    out.z.assign(z, z + steps);
+    return out;
+}
+
+double GFOLDSolver::terminal_mass() const {
+    const int steps = cfg_.steps;
+    if (steps <= 0 || !CPG_Result.prim || !CPG_Result.prim->z) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+    return std::exp(CPG_Result.prim->z[steps - 1]);
 }
 
 GFOLDThrustProfile GFOLDSolver::compute_thrust_profile() const {

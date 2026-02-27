@@ -2,10 +2,6 @@
 #include <matplotlibcpp17/mplot3d.h>
 #include <matplotlibcpp17/pyplot.h>
 #include "GFOLD_solver.hpp"
-extern "C" {
-#include "cpg_workspace.h"
-#include "cpg_solve.h"
-}
 #include <chrono>
 #include <algorithm>
 #include <cmath>

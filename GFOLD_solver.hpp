@@ -2,6 +2,7 @@
 // configure the landing problem in one place and run the solver.
 #pragma once
 
+#include <limits>
 #include <vector>
 
 struct GFOLDConfig {
@@ -32,6 +33,38 @@ struct GFOLDThrustProfile {
     std::vector<double> angle_deg;  // angle wrt x-axis (deg)
 };
 
+struct GFOLDSolverInfo {
+    int status = -999;
+    int iter = 0;
+    double obj_val = std::numeric_limits<double>::quiet_NaN();
+    double pri_res = std::numeric_limits<double>::quiet_NaN();
+    double dua_res = std::numeric_limits<double>::quiet_NaN();
+};
+
+struct GFOLDSolverLimits {
+    double feastol = std::numeric_limits<double>::quiet_NaN();
+    double abstol = std::numeric_limits<double>::quiet_NaN();
+    double reltol = std::numeric_limits<double>::quiet_NaN();
+    double feastol_inacc = std::numeric_limits<double>::quiet_NaN();
+    double abstol_inacc = std::numeric_limits<double>::quiet_NaN();
+    double reltol_inacc = std::numeric_limits<double>::quiet_NaN();
+    int maxit = 0;
+};
+
+struct GFOLDSolution {
+    int steps = 0;
+    std::vector<double> ux;
+    std::vector<double> uy;
+    std::vector<double> uz;
+    std::vector<double> vx;
+    std::vector<double> vy;
+    std::vector<double> vz;
+    std::vector<double> rx;
+    std::vector<double> ry;
+    std::vector<double> rz;
+    std::vector<double> z;
+};
+
 class GFOLDSolver {
 public:
     explicit GFOLDSolver(const GFOLDConfig& cfg = {});
@@ -41,6 +74,10 @@ public:
 
     bool solve();
     int status() const;
+    GFOLDSolverInfo info() const;
+    GFOLDSolverLimits limits() const;
+    GFOLDSolution solution() const;
+    double terminal_mass() const;
 
     GFOLDThrustProfile compute_thrust_profile() const;
 
