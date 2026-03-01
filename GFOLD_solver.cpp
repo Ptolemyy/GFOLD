@@ -129,6 +129,11 @@ GFOLDSolution GFOLDSolver::solution() const {
     out.ry.assign(ry, ry + steps);
     out.rz.assign(rz, rz + steps);
     out.z.assign(z, z + steps);
+    const double dt = cfg_.tf / static_cast<double>(steps);
+    out.t.resize(static_cast<size_t>(steps));
+    for (int i = 0; i < steps; ++i) {
+        out.t[static_cast<size_t>(i)] = cfg_.elapsed_time + dt * static_cast<double>(i);
+    }
     return out;
 }
 

@@ -9,6 +9,7 @@ struct GFOLDConfig {
     // Discretization
     int steps = 100;           // number of shooting nodes (must match generated model)
     double tf = 57.29;         // final time (s)
+    double elapsed_time = 0.0; // absolute elapsed time for node 0 (s)
 
     // Vehicle / environment
     double g0 = 3.71;          // gravity magnitude (m/s^2)
@@ -53,6 +54,7 @@ struct GFOLDSolverLimits {
 
 struct GFOLDSolution {
     int steps = 0;
+    std::vector<double> t; // absolute elapsed time per node (s)
     std::vector<double> ux;
     std::vector<double> uy;
     std::vector<double> uz;

@@ -16,9 +16,13 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
     GFOLDSolver solver(cfg_in);
     const int steps = cfg_in.steps;
 
-    auto capture_last_traj = [&]() {
+    auto capture_last_traj = [&](double tf) {
         GFOLDSolution sol = solver.solution();
         if (sol.steps != steps ||
+            static_cast<int>(sol.t.size()) != steps ||
+            static_cast<int>(sol.ux.size()) != steps ||
+            static_cast<int>(sol.uy.size()) != steps ||
+            static_cast<int>(sol.uz.size()) != steps ||
             static_cast<int>(sol.rx.size()) != steps ||
             static_cast<int>(sol.ry.size()) != steps ||
             static_cast<int>(sol.rz.size()) != steps ||
@@ -29,6 +33,10 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
             return;
         }
 
+        res.last_ux = std::move(sol.ux);
+        res.last_uy = std::move(sol.uy);
+        res.last_uz = std::move(sol.uz);
+        res.last_t  = std::move(sol.t);
         res.last_rx = std::move(sol.rx);
         res.last_ry = std::move(sol.ry);
         res.last_rz = std::move(sol.rz);
@@ -39,6 +47,8 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
         for (int i = 0; i < steps; ++i) {
             res.last_m_traj[i] = std::exp(sol.z[i]);
         }
+        res.last_steps = steps;
+        res.last_tf = tf;
         res.has_last_traj = true;
     };
 
@@ -55,7 +65,7 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
         if (mass != mass) return -std::numeric_limits<double>::infinity();
         if (save_last_traj) {
             // Overwrite with the latest feasible iterate trajectory.
-            capture_last_traj();
+            capture_last_traj(x);
         }
 
         res.feasible = true;

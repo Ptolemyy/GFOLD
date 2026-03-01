@@ -4,262 +4,546 @@
 #include <pybind11/embed.h>
 
 #include <algorithm>
+#include <cmath>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace py = pybind11;
 
-struct XYZSeries {
+struct CsvRunRow {
+    std::string sheet;
+    int solve_seq = 0;
+    int index = 0;
+    double t = std::numeric_limits<double>::quiet_NaN();
+    double ux = std::numeric_limits<double>::quiet_NaN();
+    double uy = std::numeric_limits<double>::quiet_NaN();
+    double uz = std::numeric_limits<double>::quiet_NaN();
+    double rx = std::numeric_limits<double>::quiet_NaN();
+    double ry = std::numeric_limits<double>::quiet_NaN();
+    double rz = std::numeric_limits<double>::quiet_NaN();
+    double vx = std::numeric_limits<double>::quiet_NaN();
+    double vy = std::numeric_limits<double>::quiet_NaN();
+    double vz = std::numeric_limits<double>::quiet_NaN();
+    std::string cfg;
+    std::string note;
+};
+
+struct CsvSheetBlock {
+    std::string name;
+    std::vector<CsvRunRow> rows;
+};
+
+struct ParsedRunCsv {
+    std::vector<CsvSheetBlock> sheets;
+};
+
+struct Series3D {
     std::vector<double> x;
     std::vector<double> y;
     std::vector<double> z;
 };
 
-struct ENUVelSeries {
+struct SeriesTV {
     std::vector<double> t;
-    std::vector<double> vu;
-    std::vector<double> vn;
-    std::vector<double> ve;
+    std::vector<double> v;
 };
 
-static XYZSeries load_xyz_csv(const std::string& path) {
-    XYZSeries s;
+struct Mode1SheetRows {
+    int idx = 0;
+    std::string name;
+    bool reuse = false;
+    std::vector<CsvRunRow> rows;
+};
+
+struct Mode1Segment {
+    int idx = 0;
+    bool reuse = false;
+    std::vector<double> t;
+    std::vector<double> rx;
+    std::vector<double> ry;
+    std::vector<double> rz;
+    std::vector<double> vx;
+    std::vector<double> vy;
+    std::vector<double> vz;
+};
+
+static bool starts_with(const std::string& s, const std::string& prefix) {
+    return s.rfind(prefix, 0) == 0;
+}
+
+static std::vector<std::string> split_csv(const std::string& line) {
+    std::vector<std::string> out;
+    std::stringstream ss(line);
+    std::string item;
+    while (std::getline(ss, item, ',')) out.push_back(item);
+    return out;
+}
+
+static int parse_int_or_default(const std::string& s, int def_v = 0) {
+    if (s.empty()) return def_v;
+    try {
+        return std::stoi(s);
+    } catch (...) {
+        return def_v;
+    }
+}
+
+static double parse_double_or_nan(const std::string& s) {
+    if (s.empty()) return std::numeric_limits<double>::quiet_NaN();
+    try {
+        return std::stod(s);
+    } catch (...) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+}
+
+static bool parse_mode1_sheet_index(const std::string& name, int& idx_out) {
+    static const std::string kPrefix = "mode1_";
+    if (!starts_with(name, kPrefix)) return false;
+    const std::string tail = name.substr(kPrefix.size());
+    if (tail.empty()) return false;
+    for (char c : tail) {
+        if (c < '0' || c > '9') return false;
+    }
+    try {
+        idx_out = std::stoi(tail);
+        return idx_out > 0;
+    } catch (...) {
+        return false;
+    }
+}
+
+static ParsedRunCsv load_run_csv(const std::string& path) {
+    ParsedRunCsv parsed;
     std::ifstream in(path);
-    if (!in) return s;
+    if (!in) return parsed;
+
+    std::string current_sheet;
+    bool skip_header = false;
+
+    auto get_or_add_sheet = [&](const std::string& name) -> CsvSheetBlock& {
+        for (auto& s : parsed.sheets) {
+            if (s.name == name) return s;
+        }
+        parsed.sheets.push_back(CsvSheetBlock{name, {}});
+        return parsed.sheets.back();
+    };
 
     std::string line;
     while (std::getline(in, line)) {
+        while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.pop_back();
         if (line.empty()) continue;
-        std::stringstream ss(line);
-        std::string a, b, c;
-        if (!std::getline(ss, a, ',')) continue;
-        if (!std::getline(ss, b, ',')) continue;
-        if (!std::getline(ss, c, ',')) continue;
-        try {
-            s.x.push_back(std::stod(a));
-            s.y.push_back(std::stod(b));
-            s.z.push_back(std::stod(c));
-        } catch (...) {
-            // Ignore malformed lines.
+
+        if (starts_with(line, "sheet=")) {
+            current_sheet = line.substr(6);
+            skip_header = true;
+            continue;
         }
+        if (skip_header) {
+            skip_header = false;
+            continue;
+        }
+        if (current_sheet.empty()) continue;
+
+        const auto tok = split_csv(line);
+        if (tok.size() < 14) continue;
+
+        CsvRunRow row;
+        row.sheet = current_sheet;
+        row.solve_seq = parse_int_or_default(tok[0], 0);
+        row.index = parse_int_or_default(tok[1], 0);
+        row.t = parse_double_or_nan(tok[2]);
+        row.ux = parse_double_or_nan(tok[3]);
+        row.uy = parse_double_or_nan(tok[4]);
+        row.uz = parse_double_or_nan(tok[5]);
+        row.rx = parse_double_or_nan(tok[6]);
+        row.ry = parse_double_or_nan(tok[7]);
+        row.rz = parse_double_or_nan(tok[8]);
+        row.vx = parse_double_or_nan(tok[9]);
+        row.vy = parse_double_or_nan(tok[10]);
+        row.vz = parse_double_or_nan(tok[11]);
+        row.cfg = tok[12];
+        row.note = tok[13];
+
+        auto& sheet = get_or_add_sheet(current_sheet);
+        sheet.rows.push_back(std::move(row));
+    }
+
+    return parsed;
+}
+
+static const CsvSheetBlock* find_sheet(const ParsedRunCsv& parsed, const std::string& name) {
+    for (const auto& s : parsed.sheets) {
+        if (s.name == name) return &s;
+    }
+    return nullptr;
+}
+
+static std::vector<Mode1SheetRows> extract_mode1_sheets(const ParsedRunCsv& parsed) {
+    std::vector<Mode1SheetRows> out;
+    for (const auto& s : parsed.sheets) {
+        int idx = 0;
+        if (!parse_mode1_sheet_index(s.name, idx)) continue;
+        Mode1SheetRows m;
+        m.idx = idx;
+        m.name = s.name;
+        m.rows = s.rows;
+        for (const auto& r : s.rows) {
+            if (r.note.find("reuse") != std::string::npos) {
+                m.reuse = true;
+                break;
+            }
+        }
+        out.push_back(std::move(m));
+    }
+    std::sort(out.begin(), out.end(), [](const auto& a, const auto& b) { return a.idx < b.idx; });
+    return out;
+}
+
+static Series3D build_r3d_series(const std::vector<CsvRunRow>& rows) {
+    Series3D s;
+    for (const auto& r : rows) {
+        if (!std::isfinite(r.rx) || !std::isfinite(r.ry) || !std::isfinite(r.rz)) continue;
+        s.x.push_back(r.rx);
+        s.y.push_back(r.ry);
+        s.z.push_back(r.rz);
     }
     return s;
 }
 
-static ENUVelSeries load_v_enu_t_csv(const std::string& path) {
-    ENUVelSeries s;
-    std::ifstream in(path);
-    if (!in) return s;
-
-    std::string line;
-    while (std::getline(in, line)) {
-        if (line.empty()) continue;
-        std::stringstream ss(line);
-        std::string a, b, c, d;
-        if (!std::getline(ss, a, ',')) continue;
-        if (!std::getline(ss, b, ',')) continue;
-        if (!std::getline(ss, c, ',')) continue;
-        if (!std::getline(ss, d, ',')) continue;
-        try {
-            s.t.push_back(std::stod(a));
-            s.vu.push_back(std::stod(b));
-            s.vn.push_back(std::stod(c));
-            s.ve.push_back(std::stod(d));
-        } catch (...) {
-            // Ignore malformed lines.
-        }
+static SeriesTV build_tv_series_from_recv(const std::vector<CsvRunRow>& rows, int comp) {
+    SeriesTV s;
+    for (const auto& r : rows) {
+        if (!std::isfinite(r.t)) continue;
+        double v = std::numeric_limits<double>::quiet_NaN();
+        if (comp == 0) v = r.vx;
+        if (comp == 1) v = r.vy;
+        if (comp == 2) v = r.vz;
+        if (comp == 3) v = r.rx;
+        if (comp == 4) v = r.ry;
+        if (comp == 5) v = r.rz;
+        if (!std::isfinite(v)) continue;
+        s.t.push_back(r.t);
+        s.v.push_back(v);
     }
     return s;
+}
+
+static std::vector<double> collect_breakpoints_from_recv(const std::vector<CsvRunRow>& recv_rows) {
+    std::vector<double> bp;
+    for (const auto& r : recv_rows) {
+        if (r.note != "incoming_1") continue;
+        if (!std::isfinite(r.t)) continue;
+        if (!bp.empty() && std::fabs(bp.back() - r.t) < 1e-9) continue;
+        bp.push_back(r.t);
+    }
+    return bp;
+}
+
+static std::vector<Mode1Segment> build_mode1_segments(
+    const std::vector<Mode1SheetRows>& mode1_sheets,
+    const std::vector<double>& breakpoints) {
+    std::vector<Mode1Segment> segments;
+    if (mode1_sheets.empty() || breakpoints.empty()) return segments;
+
+    const double eps = 1e-9;
+    const size_t n = std::min(mode1_sheets.size(), breakpoints.size());
+    segments.reserve(n);
+
+    for (size_t i = 0; i < n; ++i) {
+        const auto& sh = mode1_sheets[i];
+        const double t0 = breakpoints[i];
+        const double t1 = (i + 1 < breakpoints.size())
+                            ? breakpoints[i + 1]
+                            : std::numeric_limits<double>::infinity();
+
+        Mode1Segment seg;
+        seg.idx = sh.idx;
+        seg.reuse = sh.reuse;
+
+        for (const auto& r : sh.rows) {
+            if (!std::isfinite(r.t)) continue;
+            if (r.t + eps < t0) continue;
+            if (std::isfinite(t1) && r.t - eps > t1) continue;
+            if (!std::isfinite(r.rx) || !std::isfinite(r.ry) || !std::isfinite(r.rz) ||
+                !std::isfinite(r.vx) || !std::isfinite(r.vy) || !std::isfinite(r.vz)) {
+                continue;
+            }
+
+            seg.t.push_back(r.t);
+            seg.rx.push_back(r.rx);
+            seg.ry.push_back(r.ry);
+            seg.rz.push_back(r.rz);
+            seg.vx.push_back(r.vx);
+            seg.vy.push_back(r.vy);
+            seg.vz.push_back(r.vz);
+        }
+
+        if (!seg.t.empty()) segments.push_back(std::move(seg));
+    }
+
+    return segments;
 }
 
 static void ensure_python_interpreter() {
     static std::unique_ptr<py::scoped_interpreter> guard;
-    if (!guard) {
-        guard = std::make_unique<py::scoped_interpreter>();
+    if (!guard) guard = std::make_unique<py::scoped_interpreter>();
+}
+
+template <typename Axis3D>
+static void apply_equal_3d_limits(
+    Axis3D& ax,
+    const std::vector<Series3D>& series_list) {
+    double xmin = 0.0, xmax = 0.0;
+    double ymin = 0.0, ymax = 0.0;
+    double zmin = 0.0, zmax = 0.0;
+    bool inited = false;
+
+    for (const auto& s : series_list) {
+        for (size_t i = 0; i < s.x.size(); ++i) {
+            if (!inited) {
+                xmin = xmax = s.x[i];
+                ymin = ymax = s.y[i];
+                zmin = zmax = s.z[i];
+                inited = true;
+            } else {
+                xmin = std::min(xmin, s.x[i]);
+                xmax = std::max(xmax, s.x[i]);
+                ymin = std::min(ymin, s.y[i]);
+                ymax = std::max(ymax, s.y[i]);
+                zmin = std::min(zmin, s.z[i]);
+                zmax = std::max(zmax, s.z[i]);
+            }
+        }
+    }
+    if (!inited) return;
+
+    const double xmid = 0.5 * (xmin + xmax);
+    const double ymid = 0.5 * (ymin + ymax);
+    const double zmid = 0.5 * (zmin + zmax);
+    const double xspan = xmax - xmin;
+    const double yspan = ymax - ymin;
+    const double zspan = zmax - zmin;
+    const double half = 0.5 * std::max({xspan, yspan, zspan, 1e-6});
+
+    ax.set_xlim(Args(xmid - half, xmid + half));
+    ax.set_ylim(Args(ymid - half, ymid + half));
+    ax.set_zlim(Args(zmid - half, zmid + half));
+}
+
+template <typename AxisT>
+static void draw_break_lines(
+    AxisT& ax,
+    const std::vector<double>& breakpoints,
+    double ymin,
+    double ymax) {
+    if (!std::isfinite(ymin) || !std::isfinite(ymax)) {
+        ymin = -1.0;
+        ymax = 1.0;
+    }
+    if (std::fabs(ymax - ymin) < 1e-9) {
+        ymin -= 1.0;
+        ymax += 1.0;
+    }
+    for (double t : breakpoints) {
+        std::vector<double> x{t, t};
+        std::vector<double> y{ymin, ymax};
+        ax.plot(Args(x, y),
+                Kwargs("linestyle"_a = "--", "linewidth"_a = 1.0, "color"_a = "gray", "alpha"_a = 0.6));
     }
 }
 
-void plot_full_run_from_csv(
-    const std::string& recv_r_csv,
-    const std::string& mode0_r_csv,
-    const std::string& recv_vel_csv) {
-    const XYZSeries recv = load_xyz_csv(recv_r_csv);
-    const XYZSeries mode0 = load_xyz_csv(mode0_r_csv);
-    const ENUVelSeries vel = load_v_enu_t_csv(recv_vel_csv);
-
-    ensure_python_interpreter();
-    auto plt = matplotlibcpp17::pyplot::import();
-    auto fig = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(11, 10)));
-    auto ax = fig.add_subplot(Args(2, 1, 1), Kwargs("projection"_a = "3d"));
-
-    if (!mode0.x.empty()) {
-        ax.plot(Args(mode0.x, mode0.y, mode0.z),
-                Kwargs("label"_a = "best traj", "linewidth"_a = 2.0, "color"_a = "tab:blue"));
-    }
-    if (!recv.x.empty()) {
-        ax.plot(Args(recv.x, recv.y, recv.z),
-                Kwargs("label"_a = "real traj", "linewidth"_a = 2.0, "color"_a = "tab:orange"));
-    }
-
-    bool has_any = !mode0.x.empty() || !recv.x.empty();
-    if (has_any) {
-        double xmin = 0.0, xmax = 0.0;
-        double ymin = 0.0, ymax = 0.0;
-        double zmin = 0.0, zmax = 0.0;
-        bool inited = false;
-
-        auto update_bounds = [&](const XYZSeries& s) {
-            for (size_t i = 0; i < s.x.size(); ++i) {
-                if (!inited) {
-                    xmin = xmax = s.x[i];
-                    ymin = ymax = s.y[i];
-                    zmin = zmax = s.z[i];
-                    inited = true;
-                } else {
-                    xmin = std::min(xmin, s.x[i]);
-                    xmax = std::max(xmax, s.x[i]);
-                    ymin = std::min(ymin, s.y[i]);
-                    ymax = std::max(ymax, s.y[i]);
-                    zmin = std::min(zmin, s.z[i]);
-                    zmax = std::max(zmax, s.z[i]);
-                }
-            }
-        };
-
-        update_bounds(mode0);
-        update_bounds(recv);
-
-        if (inited) {
-            const double xmid = 0.5 * (xmin + xmax);
-            const double ymid = 0.5 * (ymin + ymax);
-            const double zmid = 0.5 * (zmin + zmax);
-            const double xspan = xmax - xmin;
-            const double yspan = ymax - ymin;
-            const double zspan = zmax - zmin;
-            const double half = 0.5 * std::max({xspan, yspan, zspan, 1e-6});
-
-            ax.set_xlim(Args(xmid - half, xmid + half));
-            ax.set_ylim(Args(ymid - half, ymid + half));
-            ax.set_zlim(Args(zmid - half, zmid + half));
+template <typename AxisT>
+static void plot_component_overlay(
+    AxisT& ax,
+    const std::string& title,
+    const SeriesTV& recv,
+    const std::vector<Mode1Segment>& segments,
+    const std::vector<double>& breakpoints,
+    int comp_idx) {
+    double ymin = std::numeric_limits<double>::infinity();
+    double ymax = -std::numeric_limits<double>::infinity();
+    auto update_y_bounds = [&](const std::vector<double>& y) {
+        for (double v : y) {
+            if (!std::isfinite(v)) continue;
+            ymin = std::min(ymin, v);
+            ymax = std::max(ymax, v);
         }
+    };
+
+    if (!recv.t.empty()) {
+        ax.plot(Args(recv.t, recv.v),
+                Kwargs("label"_a = "recv", "linewidth"_a = 2.0, "color"_a = "black", "alpha"_a = 0.85));
+        update_y_bounds(recv.v);
     }
 
-    ax.set_xlabel(Args("Up"));
-    ax.set_ylabel(Args("North"));
-    ax.set_zlabel(Args("East"));
-    ax.set_title(Args("Full Run: Received R and Mode0 Trajectory"));
+    bool solver_labeled = false;
+    bool reuse_labeled = false;
+    for (const auto& seg : segments) {
+        const std::vector<double>* y = nullptr;
+        if (comp_idx == 0) y = &seg.rx;
+        if (comp_idx == 1) y = &seg.ry;
+        if (comp_idx == 2) y = &seg.rz;
+        if (comp_idx == 3) y = &seg.vx;
+        if (comp_idx == 4) y = &seg.vy;
+        if (comp_idx == 5) y = &seg.vz;
+        if (!y || y->empty()) continue;
+
+        const bool reuse = seg.reuse;
+        std::string label = "_nolegend_";
+        if (reuse && !reuse_labeled) {
+            label = "mode1_reuse";
+            reuse_labeled = true;
+        } else if (!reuse && !solver_labeled) {
+            label = "mode1_solver";
+            solver_labeled = true;
+        }
+
+        ax.plot(Args(seg.t, *y),
+                Kwargs("label"_a = label,
+                       "linewidth"_a = 1.8,
+                       "alpha"_a = 0.9,
+                       "color"_a = (reuse ? "tab:orange" : "tab:blue")));
+        update_y_bounds(*y);
+    }
+
+    draw_break_lines(ax, breakpoints, ymin, ymax);
+    ax.set_title(Args(title));
+    ax.set_xlabel(Args("t (s)"));
     ax.grid(Args(true));
     ax.legend();
-
-    auto ax2 = fig.add_subplot(Args(2, 1, 2));
-    if (!vel.t.empty()) {
-        ax2.plot(Args(vel.t, vel.vu), Kwargs("label"_a = "v_up", "linewidth"_a = 1.8, "color"_a = "tab:red"));
-        ax2.plot(Args(vel.t, vel.vn), Kwargs("label"_a = "v_north", "linewidth"_a = 1.8, "color"_a = "tab:green"));
-        ax2.plot(Args(vel.t, vel.ve), Kwargs("label"_a = "v_east", "linewidth"_a = 1.8, "color"_a = "tab:purple"));
-    }
-    ax2.set_title(Args("Full Run: Recv ENU Velocity vs Time"));
-    ax2.set_xlabel(Args("t (s)"));
-    ax2.set_ylabel(Args("v (m/s)"));
-    ax2.grid(Args(true));
-    ax2.legend();
-
-    plt.show();
 }
 
-void plot_post_fail_compare_from_csv(
-    const std::string& recv_r_csv,
-    const std::string& last_traj_r_csv,
-    const std::string& recv_vel_csv,
-    const std::string& last_traj_vel_csv) {
-    const XYZSeries recv = load_xyz_csv(recv_r_csv);
-    const XYZSeries last_traj = load_xyz_csv(last_traj_r_csv);
-    const ENUVelSeries recv_vel = load_v_enu_t_csv(recv_vel_csv);
-    const ENUVelSeries last_vel = load_v_enu_t_csv(last_traj_vel_csv);
+bool plot_from_run_csv(const std::string& run_csv_path) {
+    const ParsedRunCsv parsed = load_run_csv(run_csv_path);
+    if (parsed.sheets.empty()) return false;
+
+    const CsvSheetBlock* recv_sheet = find_sheet(parsed, "receive");
+    if (!recv_sheet) return false;
+    const std::vector<CsvRunRow>& recv_rows = recv_sheet->rows;
+    if (recv_rows.empty()) return false;
+
+    const std::vector<Mode1SheetRows> mode1_sheets = extract_mode1_sheets(parsed);
+    if (mode1_sheets.empty()) return false;
 
     ensure_python_interpreter();
     auto plt = matplotlibcpp17::pyplot::import();
-    auto fig = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(11, 10)));
-    auto ax = fig.add_subplot(Args(2, 1, 1), Kwargs("projection"_a = "3d"));
 
-    if (!recv.x.empty()) {
-        ax.plot(Args(recv.x, recv.y, recv.z),
-                Kwargs("label"_a = "recv after fail", "linewidth"_a = 2.0, "color"_a = "tab:orange"));
+    // Figure 1:
+    // 1) R 3D for mode1_1 vs receive
+    // 2) receive v_x / v_y / v_z vs t
+    auto fig1 = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(12, 10)));
+    auto ax1_3d = fig1.add_subplot(Args(2, 1, 1), Kwargs("projection"_a = "3d"));
+
+    const CsvSheetBlock* mode1_1_sheet = find_sheet(parsed, "mode1_1");
+    const Series3D mode1_1_r = mode1_1_sheet ? build_r3d_series(mode1_1_sheet->rows) : Series3D{};
+    const Series3D recv_r = build_r3d_series(recv_rows);
+
+    if (!mode1_1_r.x.empty()) {
+        ax1_3d.plot(Args(mode1_1_r.x, mode1_1_r.y, mode1_1_r.z),
+                    Kwargs("label"_a = "mode1_1", "linewidth"_a = 2.0, "color"_a = "tab:blue"));
     }
-    if (!last_traj.x.empty()) {
-        ax.plot(Args(last_traj.x, last_traj.y, last_traj.z),
-                Kwargs("label"_a = "last_traj", "linewidth"_a = 2.2, "linestyle"_a = "--", "color"_a = "tab:blue"));
+    if (!recv_r.x.empty()) {
+        ax1_3d.plot(Args(recv_r.x, recv_r.y, recv_r.z),
+                    Kwargs("label"_a = "recv", "linewidth"_a = 2.0, "color"_a = "tab:orange"));
     }
+    apply_equal_3d_limits(ax1_3d, {mode1_1_r, recv_r});
+    ax1_3d.set_xlabel(Args("r_x"));
+    ax1_3d.set_ylabel(Args("r_y"));
+    ax1_3d.set_zlabel(Args("r_z"));
+    ax1_3d.set_title(Args("R 3D: mode1_1 vs recv"));
+    ax1_3d.grid(Args(true));
+    ax1_3d.legend();
 
-    bool has_any = !last_traj.x.empty() || !recv.x.empty();
-    if (has_any) {
-        double xmin = 0.0, xmax = 0.0;
-        double ymin = 0.0, ymax = 0.0;
-        double zmin = 0.0, zmax = 0.0;
-        bool inited = false;
+    auto ax1_v = fig1.add_subplot(Args(2, 1, 2));
+    const SeriesTV recv_vx = build_tv_series_from_recv(recv_rows, 0);
+    const SeriesTV recv_vy = build_tv_series_from_recv(recv_rows, 1);
+    const SeriesTV recv_vz = build_tv_series_from_recv(recv_rows, 2);
+    if (!recv_vx.t.empty()) {
+        ax1_v.plot(Args(recv_vx.t, recv_vx.v), Kwargs("label"_a = "recv_v_x", "linewidth"_a = 1.8, "color"_a = "tab:red"));
+    }
+    if (!recv_vy.t.empty()) {
+        ax1_v.plot(Args(recv_vy.t, recv_vy.v), Kwargs("label"_a = "recv_v_y", "linewidth"_a = 1.8, "color"_a = "tab:green"));
+    }
+    if (!recv_vz.t.empty()) {
+        ax1_v.plot(Args(recv_vz.t, recv_vz.v), Kwargs("label"_a = "recv_v_z", "linewidth"_a = 1.8, "color"_a = "tab:blue"));
+    }
+    ax1_v.set_title(Args("recv v_x v_y v_z vs t"));
+    ax1_v.set_xlabel(Args("t (s)"));
+    ax1_v.set_ylabel(Args("v"));
+    ax1_v.grid(Args(true));
+    ax1_v.legend();
 
-        auto update_bounds = [&](const XYZSeries& s) {
-            for (size_t i = 0; i < s.x.size(); ++i) {
-                if (!inited) {
-                    xmin = xmax = s.x[i];
-                    ymin = ymax = s.y[i];
-                    zmin = zmax = s.z[i];
-                    inited = true;
-                } else {
-                    xmin = std::min(xmin, s.x[i]);
-                    xmax = std::max(xmax, s.x[i]);
-                    ymin = std::min(ymin, s.y[i]);
-                    ymax = std::max(ymax, s.y[i]);
-                    zmin = std::min(zmin, s.z[i]);
-                    zmax = std::max(zmax, s.z[i]);
-                }
-            }
-        };
+    // Figure 2:
+    // Stitch/overlay all mode1 sheets by incoming_1 breakpoints and compare with recv in 6 subplots.
+    const std::vector<double> breakpoints = collect_breakpoints_from_recv(recv_rows);
+    const std::vector<Mode1Segment> segments = build_mode1_segments(mode1_sheets, breakpoints);
 
-        update_bounds(last_traj);
-        update_bounds(recv);
+    auto fig2 = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(16, 11)));
+    auto ax_rx = fig2.add_subplot(Args(3, 2, 1));
+    auto ax_ry = fig2.add_subplot(Args(3, 2, 2));
+    auto ax_rz = fig2.add_subplot(Args(3, 2, 3));
+    auto ax_vx = fig2.add_subplot(Args(3, 2, 4));
+    auto ax_vy = fig2.add_subplot(Args(3, 2, 5));
+    auto ax_vz = fig2.add_subplot(Args(3, 2, 6));
 
-        if (inited) {
-            const double xmid = 0.5 * (xmin + xmax);
-            const double ymid = 0.5 * (ymin + ymax);
-            const double zmid = 0.5 * (zmin + zmax);
-            const double xspan = xmax - xmin;
-            const double yspan = ymax - ymin;
-            const double zspan = zmax - zmin;
-            const double half = 0.5 * std::max({xspan, yspan, zspan, 1e-6});
+    const SeriesTV recv_rx = build_tv_series_from_recv(recv_rows, 3);
+    const SeriesTV recv_ry = build_tv_series_from_recv(recv_rows, 4);
+    const SeriesTV recv_rz = build_tv_series_from_recv(recv_rows, 5);
 
-            // Fix limits/aspect so matplotlib does not auto-rescale axes differently.
-            ax.set_xlim(Args(xmid - half, xmid + half));
-            ax.set_ylim(Args(ymid - half, ymid + half));
-            ax.set_zlim(Args(zmid - half, zmid + half));
+    plot_component_overlay(ax_rx, "r_x vs t", recv_rx, segments, breakpoints, 0);
+    plot_component_overlay(ax_ry, "r_y vs t", recv_ry, segments, breakpoints, 1);
+    plot_component_overlay(ax_rz, "r_z vs t", recv_rz, segments, breakpoints, 2);
+    plot_component_overlay(ax_vx, "v_x vs t", recv_vx, segments, breakpoints, 3);
+    plot_component_overlay(ax_vy, "v_y vs t", recv_vy, segments, breakpoints, 4);
+    plot_component_overlay(ax_vz, "v_z vs t", recv_vz, segments, breakpoints, 5);
+
+    plt.show();
+    return true;
+}
+
+bool debug_cfg_from_run_csv(
+    const std::string& run_csv_path,
+    double target_elapsed_sec,
+    std::string& mode1_sheet_name_out,
+    std::string& cfg_out) {
+    mode1_sheet_name_out.clear();
+    cfg_out.clear();
+
+    const ParsedRunCsv parsed = load_run_csv(run_csv_path);
+    if (parsed.sheets.empty()) return false;
+
+    const CsvSheetBlock* recv_sheet = find_sheet(parsed, "receive");
+    if (!recv_sheet || recv_sheet->rows.empty()) return false;
+
+    std::vector<double> bp = collect_breakpoints_from_recv(recv_sheet->rows);
+    if (bp.empty()) return false;
+
+    int best_idx = 0;
+    double best_abs_dt = std::numeric_limits<double>::infinity();
+    for (int i = 0; i < static_cast<int>(bp.size()); ++i) {
+        const double dt = std::fabs(bp[i] - target_elapsed_sec);
+        if (dt < best_abs_dt) {
+            best_abs_dt = dt;
+            best_idx = i;
         }
     }
 
-    ax.set_xlabel(Args("Up"));
-    ax.set_ylabel(Args("North"));
-    ax.set_zlabel(Args("East"));
-    ax.set_title(Args("R 3D: recv after fail vs last_traj"));
-    ax.grid(Args(true));
-    ax.legend();
+    const int mode1_idx = best_idx + 1;
+    mode1_sheet_name_out = "mode1_" + std::to_string(mode1_idx);
+    const CsvSheetBlock* mode1_sheet = find_sheet(parsed, mode1_sheet_name_out);
+    if (!mode1_sheet || mode1_sheet->rows.empty()) return false;
 
-    auto ax2 = fig.add_subplot(Args(2, 1, 2));
-    if (!recv_vel.t.empty()) {
-        ax2.plot(Args(recv_vel.t, recv_vel.vu), Kwargs("label"_a = "recv_v_x", "linewidth"_a = 1.8, "alpha"_a = 0.8, "color"_a = "tab:red"));
-        ax2.plot(Args(recv_vel.t, recv_vel.vn), Kwargs("label"_a = "recv_v_y", "linewidth"_a = 1.8, "alpha"_a = 0.8, "color"_a = "tab:green"));
-        ax2.plot(Args(recv_vel.t, recv_vel.ve), Kwargs("label"_a = "recv_v_z", "linewidth"_a = 1.8, "alpha"_a = 0.8, "color"_a = "tab:blue"));
+    for (const auto& r : mode1_sheet->rows) {
+        if (!r.cfg.empty()) {
+            cfg_out = r.cfg;
+            return true;
+        }
     }
-    if (!last_vel.t.empty()) {
-        ax2.plot(Args(last_vel.t, last_vel.vu), Kwargs("label"_a = "last_v_x", "linewidth"_a = 2.0, "linestyle"_a = "--", "color"_a = "tab:red"));
-        ax2.plot(Args(last_vel.t, last_vel.vn), Kwargs("label"_a = "last_v_y", "linewidth"_a = 2.0, "linestyle"_a = "--", "color"_a = "tab:green"));
-        ax2.plot(Args(last_vel.t, last_vel.ve), Kwargs("label"_a = "last_v_z", "linewidth"_a = 2.0, "linestyle"_a = "--", "color"_a = "tab:blue"));
-    }
-    ax2.set_title(Args("v_x v_y v_z vs t"));
-    ax2.set_xlabel(Args("t (s)"));
-    ax2.set_ylabel(Args("v (m/s)"));
-    ax2.grid(Args(true));
-    ax2.legend();
-
-    plt.show();
+    return false;
 }
