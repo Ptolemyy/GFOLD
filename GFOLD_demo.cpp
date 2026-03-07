@@ -238,6 +238,7 @@ struct CsvLogRow {
     std::string sheet = "mode0";
     long long solve_seq = 0;
     int index = 0;
+    int solver_n = -1;
     double elapsed_time = std::numeric_limits<double>::quiet_NaN();
     double ux = std::numeric_limits<double>::quiet_NaN();
     double uy = std::numeric_limits<double>::quiet_NaN();
@@ -284,6 +285,7 @@ static std::string format_solver_cfg(const GFOLDConfig& cfg) {
         << ";glide=" << cfg.glide_slope_deg
         << ";theta=" << cfg.max_angle_deg
         << ";steps=" << cfg.steps
+        << ";solver_n=" << cfg.solver_n
         << ";elapsed_time=" << cfg.elapsed_time;
     return oss.str();
 }
@@ -360,12 +362,14 @@ static bool write_run_csv(const fs::path& out_path, const std::vector<CsvLogRow>
     oss << std::setprecision(10) << std::fixed;
     auto emit_sheet = [&](const std::string& sheet_name) {
         oss << "sheet=" << sheet_name << "\n";
-        oss << "solve_seq,index,elapsed_time,u_x,u_y,u_z,r_x,r_y,r_z,v_x,v_y,v_z,cfg,note\n";
+        oss << "solve_seq,index,solver_n,elapsed_time,u_x,u_y,u_z,r_x,r_y,r_z,v_x,v_y,v_z,cfg,note\n";
         bool cfg_written = false;
         for (const auto& r : rows) {
             if (r.sheet != sheet_name) continue;
             oss << r.solve_seq << ",";
             oss << r.index << ",";
+            if (r.solver_n > 0) oss << r.solver_n;
+            oss << ",";
             write_csv_value(oss, r.elapsed_time); oss << ",";
             write_csv_value(oss, r.ux); oss << ",";
             write_csv_value(oss, r.uy); oss << ",";
@@ -392,6 +396,7 @@ static bool write_run_csv(const fs::path& out_path, const std::vector<CsvLogRow>
 static std::vector<CsvLogRow> build_solver_rows(
     const std::string& sheet,
     long long solve_seq,
+    int solver_n,
     const std::vector<double>& t,
     const std::vector<double>& ux,
     const std::vector<double>& uy,
@@ -424,6 +429,7 @@ static std::vector<CsvLogRow> build_solver_rows(
         row.sheet = sheet;
         row.solve_seq = solve_seq;
         row.index = i;
+        row.solver_n = solver_n;
         row.elapsed_time = t[static_cast<size_t>(i)];
         row.ux = ux[i];
         row.uy = uy[i];
@@ -555,15 +561,29 @@ static int closest_prior_index_by_v(const TrajectoryCache& traj, const double v0
     return best_idx;
 }
 
-static std::vector<int> build_sample_indices(int steps, int gap, int max_count) {
-    std::vector<int> indices;
-    indices.reserve(max_count);
-    const int stride = gap + 1;
-    for (int i = 0; i < max_count; ++i) {
-        const int idx = i * stride;
-        if (idx >= steps) break;
-        indices.push_back(idx);
+static int choose_mode1_solver_n(double remaining_tf, double recompute_time) {
+    static const int kCandidates[] = {100, 50, 25, 10};
+    int selected = kCandidates[0];
+    for (int n : kCandidates) {
+        selected = n;
+        const double tf_window = remaining_tf * 10.0 / static_cast<double>(n);
+        if (tf_window >= recompute_time || n == 10) break;
     }
+    return selected;
+}
+
+static void apply_mode1_n_policy(GFOLDConfig& cfg, double recompute_time) {
+    const int solver_n = choose_mode1_solver_n(cfg.tf, recompute_time);
+    cfg.steps = solver_n;
+    cfg.solver_n = solver_n;
+}
+
+static std::vector<int> build_sample_indices(int steps, int max_count) {
+    std::vector<int> indices;
+    if (steps <= 0 || max_count <= 0) return indices;
+    const int count = std::min(steps, max_count);
+    indices.reserve(static_cast<size_t>(count));
+    for (int idx = 0; idx < count; ++idx) indices.push_back(idx);
     return indices;
 }
 
@@ -626,8 +646,6 @@ int main() {
     std::vector<std::array<double, 3>> post_fail_recv_r_points;
     std::vector<std::array<double, 4>> post_fail_recv_v_xyz_t_points;
     bool end_plot_launched = false;
-    const std::vector<int> sample_gaps = {0, 1, 3, 4, 9};
-    size_t sample_gap_mode = 0;
     constexpr int max_lines = 10;
     constexpr double recompute_time = 1.0+0.3;
     std::vector<InfoEndRvm> info_end_rvm_list;
@@ -934,6 +952,7 @@ int main() {
                 auto rows = build_solver_rows(
                     "mode0",
                     mode0_solve_seq++,
+                    mode0_cfg_for_log.solver_n,
                     res.last_t,
                     res.last_ux,
                     res.last_uy,
@@ -952,8 +971,6 @@ int main() {
             mode1_solver_enabled = true;
             last_traj.valid = false;
             last_traj_solve_elapsed_sec = std::numeric_limits<double>::quiet_NaN();
-            sample_gap_mode = 0;
-
             // Request kOS to send fresh state as mode1 (fixed-format marker)
             {
                 write_compute_finish(recv_path, 1);
@@ -969,7 +986,7 @@ int main() {
                 continue;
             }
 
-            if (last_traj.valid && last_traj.steps == cfg.steps && last_traj.tf > 0.0) {
+            if (last_traj.valid && last_traj.steps > 0 && last_traj.tf > 0.0) {
                 const int idx = closest_prior_index_by_r(last_traj, cfg.r0);
                 const double dt_prev = last_traj.tf / static_cast<double>(last_traj.steps);
                 const double rem_tf = dt_prev * static_cast<double>(last_traj.steps - idx);
@@ -982,6 +999,7 @@ int main() {
             const double nominal_throttle_max = cfg.throttle_max;
             const double nominal_glide_slope_deg = cfg.glide_slope_deg;
             apply_tf_rules(cfg, nominal_throttle_max, nominal_glide_slope_deg);
+            apply_mode1_n_policy(cfg, recompute_time);
             log_mode1_cfg(cfg);
 
             GFOLDSolver solver(cfg);
@@ -990,7 +1008,8 @@ int main() {
             std::string fallback_state = "not_used";
             TrajectoryCache active_traj;
             if (mode1_solver_enabled) {
-                ok = solver.solve();
+                int mode1_solver_n = cfg.solver_n;
+                ok = solver.solve(mode1_solver_n);
                 solver_state = ok ? "ok" : ("fail(" + std::to_string(solver.status()) + ")");
                 if (!ok) {
                     if (fallback_enabled) {
@@ -1004,14 +1023,12 @@ int main() {
                         SearchResult retry = find_best_tf(search_cfg, tf_min, tf_max, 4, false);
                         if (!retry.feasible) {
                             fallback_state = "infeasible";
-                            const bool gap_is_9 =
-                                sample_gap_mode < sample_gaps.size() &&
-                                sample_gaps[sample_gap_mode] == 9;
-                            if (gap_is_9) {
+                            const bool at_min_solver_n = (cfg.solver_n <= 10);
+                            if (at_min_solver_n) {
                                 fallback_enabled = false;
                                 mode1_solver_enabled = false;
-//                                std::cerr << "[mode1] fallback infeasible with max gap="
-//                                          << sample_gaps[sample_gap_mode]
+//                                std::cerr << "[mode1] fallback infeasible at min solver n="
+//                                          << cfg.solver_n
 //                                          << ", return COMPUTE_FINISH,2\n";
                                 write_compute_finish(recv_path, 2);
                                 continue;
@@ -1025,10 +1042,12 @@ int main() {
                             fallback_state = "ok";
                             cfg.tf = retry.best_tf;
                             apply_tf_rules(cfg, nominal_throttle_max, nominal_glide_slope_deg);
+                            apply_mode1_n_policy(cfg, recompute_time);
                             log_mode1_cfg(cfg);
                             best_tf = retry.best_tf;
                             solver.set_config(cfg);
-                            ok = solver.solve();
+                            mode1_solver_n = cfg.solver_n;
+                            ok = solver.solve(mode1_solver_n);
                             if (!ok) {
                                 solver_state = "fail(" + std::to_string(solver.status()) + ")";
                                 fallback_state = "solve_fail";
@@ -1192,6 +1211,7 @@ int main() {
                 auto rows = build_solver_rows(
                     mode1_sheet_name,
                     this_mode1_seq,
+                    cfg.solver_n,
                     active_traj.t,
                     active_traj.ux,
                     active_traj.uy,
@@ -1219,34 +1239,20 @@ int main() {
             oss << "COMPUTE_FINISH,1\n";
             recv_lines += 1;
             double last_t_abs = active_traj.t.empty() ? base_time : active_traj.t.front();
-            auto emit_indices = build_sample_indices(steps, sample_gaps[sample_gap_mode], max_lines);
-            double tf_needed = 0.0;
-            if (emit_indices.size() >= 2) {
-                const int first_idx = emit_indices.front();
-                const int last_idx = emit_indices.back();
-                tf_needed = active_traj.t[last_idx] - active_traj.t[first_idx];
-            }
-
-            while (tf_needed < recompute_time && (sample_gap_mode + 1) < sample_gaps.size()) {
-                sample_gap_mode += 1;
-                emit_indices = build_sample_indices(steps, sample_gaps[sample_gap_mode], max_lines);
-                if (emit_indices.size() >= 2) {
-                    const int first_idx = emit_indices.front();
-                    const int last_idx = emit_indices.back();
-                    tf_needed = active_traj.t[last_idx] - active_traj.t[first_idx];
-                } else {
-                    tf_needed = 0.0;
-                }
-            }
+            auto emit_indices = build_sample_indices(steps, max_lines);
 
             std::cout << "\x1B[2J\x1B[H";
             std::cout << std::flush;
 
             std::cout << std::fixed << std::setprecision(6);
             const double best_m_to_print = has_mode0_best_m ? mode0_best_m : 0.0;
+            const int mode1_solver_n = (cfg.solver_n > 0) ? cfg.solver_n : steps;
+            const double tf_window = active_traj.tf * 10.0 / static_cast<double>(mode1_solver_n);
             std::cout << "[mode1] solver=" << solver_state
                       << " fallback=" << fallback_state
                       << " remaining_tf=" << active_traj.tf
+                      << " n=" << mode1_solver_n
+                      << " tf10_over_n=" << tf_window
                       << " best_m=" << best_m_to_print << "\n";
 
             int lines_emitted = 0;

@@ -19,6 +19,7 @@ struct CsvRunRow {
     std::string sheet;
     int solve_seq = 0;
     int index = 0;
+    int solver_n = -1;
     double t = std::numeric_limits<double>::quiet_NaN();
     double ux = std::numeric_limits<double>::quiet_NaN();
     double uy = std::numeric_limits<double>::quiet_NaN();
@@ -153,22 +154,29 @@ static ParsedRunCsv load_run_csv(const std::string& path) {
         const auto tok = split_csv(line);
         if (tok.size() < 14) continue;
 
+        // New format inserts solver_n after index:
+        // old : solve_seq,index,elapsed_time,...,cfg,note
+        // new : solve_seq,index,solver_n,elapsed_time,...,cfg,note
+        const int off = (tok.size() >= 15) ? 1 : 0;
+        if (static_cast<int>(tok.size()) < (14 + off)) continue;
+
         CsvRunRow row;
         row.sheet = current_sheet;
         row.solve_seq = parse_int_or_default(tok[0], 0);
         row.index = parse_int_or_default(tok[1], 0);
-        row.t = parse_double_or_nan(tok[2]);
-        row.ux = parse_double_or_nan(tok[3]);
-        row.uy = parse_double_or_nan(tok[4]);
-        row.uz = parse_double_or_nan(tok[5]);
-        row.rx = parse_double_or_nan(tok[6]);
-        row.ry = parse_double_or_nan(tok[7]);
-        row.rz = parse_double_or_nan(tok[8]);
-        row.vx = parse_double_or_nan(tok[9]);
-        row.vy = parse_double_or_nan(tok[10]);
-        row.vz = parse_double_or_nan(tok[11]);
-        row.cfg = tok[12];
-        row.note = tok[13];
+        row.solver_n = (off == 1) ? parse_int_or_default(tok[2], -1) : -1;
+        row.t = parse_double_or_nan(tok[2 + off]);
+        row.ux = parse_double_or_nan(tok[3 + off]);
+        row.uy = parse_double_or_nan(tok[4 + off]);
+        row.uz = parse_double_or_nan(tok[5 + off]);
+        row.rx = parse_double_or_nan(tok[6 + off]);
+        row.ry = parse_double_or_nan(tok[7 + off]);
+        row.rz = parse_double_or_nan(tok[8 + off]);
+        row.vx = parse_double_or_nan(tok[9 + off]);
+        row.vy = parse_double_or_nan(tok[10 + off]);
+        row.vz = parse_double_or_nan(tok[11 + off]);
+        row.cfg = tok[12 + off];
+        row.note = tok[13 + off];
 
         auto& sheet = get_or_add_sheet(current_sheet);
         sheet.rows.push_back(std::move(row));

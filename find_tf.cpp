@@ -64,6 +64,10 @@ static bool parse_triplet_bracket(const std::string& v, double& a, double& b, do
     return true;
 }
 
+static bool is_supported_solver_n(int n) {
+    return n == 3 || n == 10 || n == 25 || n == 50 || n == 100;
+}
+
 static bool apply_cfg_token(GFOLDConfig& cfg, const std::string& token) {
     const size_t eq = token.find('=');
     if (eq == std::string::npos) return true;
@@ -79,7 +83,16 @@ static bool apply_cfg_token(GFOLDConfig& cfg, const std::string& token) {
         else if (key == "m0") cfg.m0 = std::stod(val);
         else if (key == "glide") cfg.glide_slope_deg = std::stod(val);
         else if (key == "theta") cfg.max_angle_deg = std::stod(val);
-        else if (key == "steps") cfg.steps = std::stoi(val);
+        else if (key == "steps") {
+            cfg.steps = std::stoi(val);
+            cfg.solver_n = cfg.steps;
+            if (!is_supported_solver_n(cfg.solver_n)) return false;
+        }
+        else if (key == "n" || key == "solver_n") {
+            cfg.solver_n = std::stoi(val);
+            cfg.steps = cfg.solver_n;
+            if (!is_supported_solver_n(cfg.solver_n)) return false;
+        }
         else if (key == "elapsed_time") cfg.elapsed_time = std::stod(val);
         else if (key == "throt") {
             double a = 0.0, b = 0.0;
@@ -166,7 +179,37 @@ static bool parse_elapsed_input(std::string s, double& out_sec) {
 struct DebugModeInput {
     double elapsed_sec = std::numeric_limits<double>::quiet_NaN();
     bool direct_mode = false;
+    int solver_n = -1; // optional override
 };
+
+static bool parse_solver_n_input(std::string s, int& out_n) {
+    s = trim_copy(s);
+    if (s.empty()) return false;
+
+    for (char& c : s) {
+        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    }
+
+    if (s.rfind("solver_n", 0) == 0) {
+        s = s.substr(8);
+    } else if (!s.empty() && s.front() == 'n') {
+        s = s.substr(1);
+    }
+
+    s = trim_copy(s);
+    if (!s.empty() && s.front() == '=') s = s.substr(1);
+    s = trim_copy(s);
+    if (s.empty()) return false;
+
+    try {
+        const int n = std::stoi(s);
+        if (!is_supported_solver_n(n)) return false;
+        out_n = n;
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
 
 static bool parse_debug_mode_input(std::string s, DebugModeInput& out) {
     s = trim_copy(s);
@@ -180,10 +223,41 @@ static bool parse_debug_mode_input(std::string s, DebugModeInput& out) {
     s = trim_copy(s);
     if (s.empty()) return false;
 
+    for (char& c : s) {
+        if (c == ',' || c == ';') c = ' ';
+    }
+
+    std::stringstream ss(s);
+    std::vector<std::string> parts;
+    std::string part;
+    while (ss >> part) parts.push_back(part);
+    if (parts.empty() || parts.size() > 2) return false;
+
+    int n_override = -1;
     double t = 0.0;
-    if (!parse_elapsed_input(s, t)) return false;
+    if (!parse_elapsed_input(parts[0], t)) {
+        // Also accept compact forms like d36n50 / 36n25.
+        std::string compact = parts[0];
+        for (char& c : compact) {
+            if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+        }
+        const size_t pos_n = compact.find('n', 1);
+        if (pos_n == std::string::npos) return false;
+        const std::string elapsed_part = parts[0].substr(0, pos_n);
+        const std::string n_part = parts[0].substr(pos_n);
+        if (!parse_elapsed_input(elapsed_part, t)) return false;
+        if (!parse_solver_n_input(n_part, n_override)) return false;
+    }
+
+    if (parts.size() == 2) {
+        int n2 = -1;
+        if (!parse_solver_n_input(parts[1], n2)) return false;
+        n_override = n2;
+    }
+
     out.elapsed_sec = t;
     out.direct_mode = direct;
+    out.solver_n = n_override;
     return true;
 }
 
@@ -245,10 +319,19 @@ static bool load_cfg_from_run_csv_by_time(
         const auto tok = split_csv_line(line);
         if (tok.size() < 14) continue;
 
+        // New CSV format inserts solver_n after index:
+        // old : solve_seq,index,elapsed_time,...,cfg,note
+        // new : solve_seq,index,solver_n,elapsed_time,...,cfg,note
+        const int off = (tok.size() >= 15) ? 1 : 0;
+        if (static_cast<int>(tok.size()) < (14 + off)) continue;
+        const int elapsed_col = 2 + off;
+        const int cfg_col = 12 + off;
+        const int note_col = 13 + off;
+
         if (current_sheet == "receive") {
-            if (tok[13] == "incoming_1") {
+            if (tok[note_col] == "incoming_1") {
                 try {
-                    const double t = std::stod(tok[2]);
+                    const double t = std::stod(tok[elapsed_col]);
                     if (std::isfinite(t)) {
                         if (incoming_breaks.empty() || std::fabs(incoming_breaks.back() - t) > 1e-9) {
                             incoming_breaks.push_back(t);
@@ -263,7 +346,7 @@ static bool load_cfg_from_run_csv_by_time(
         int mode_idx = 0;
         if (!parse_mode1_sheet_index(current_sheet, mode_idx)) continue;
         if (mode1_cfg.find(mode_idx) != mode1_cfg.end()) continue;
-        if (!tok[12].empty()) mode1_cfg[mode_idx] = tok[12];
+        if (!tok[cfg_col].empty()) mode1_cfg[mode_idx] = tok[cfg_col];
     }
 
     if (incoming_breaks.empty() || mode1_cfg.empty()) return false;
@@ -455,6 +538,7 @@ int main(int argc, char** argv)
     cfg.glide_slope_deg = 30.000000;
     cfg.max_angle_deg = 20.000000;
     cfg.elapsed_time = 36.0000000000;
+    cfg.solver_n = cfg.steps;
     bool has_user_center = false;
     double user_center = std::numeric_limits<double>::quiet_NaN();
     bool direct_mode = false;
@@ -463,6 +547,10 @@ int main(int argc, char** argv)
     // Optional override:
     //   find_tf "<cfg_text>"
     //   find_tf --cfg-file <path>
+    // cfg_text supports:
+    //   n=<3|10|25|50|100>
+    //   solver_n=<3|10|25|50|100>
+    //   steps=<3|10|25|50|100> (kept for compatibility, also sets solver_n)
     // No args:
     //   find latest run csv in current directory, ask elapsed time, and map to mode1 cfg.
     if (argc >= 2) {
@@ -485,7 +573,7 @@ int main(int argc, char** argv)
         fs::path latest_csv;
         if (find_latest_run_csv(fs::current_path(), latest_csv)) {
             std::cout << "[debug] latest_csv=" << latest_csv.string() << "\n";
-            std::cout << "[debug] input elapsed time (e.g. 36, 36s, d36, d36s), empty to skip: ";
+            std::cout << "[debug] input elapsed time (e.g. 36, d36, 36 n50, d36 n=25), empty to skip: ";
             std::string input;
             if (std::getline(std::cin, input)) {
                 input = trim_copy(input);
@@ -510,6 +598,10 @@ int main(int argc, char** argv)
                             std::cerr << "failed to parse cfg from latest csv\n";
                             return 1;
                         }
+                        if (parsed_input.solver_n > 0) {
+                            cfg.solver_n = parsed_input.solver_n;
+                            cfg.steps = parsed_input.solver_n;
+                        }
                     } else {
                         std::cout << "[debug] lookup_failed t=" << user_center << "s\n";
                         return 1;
@@ -531,7 +623,8 @@ int main(int argc, char** argv)
         }
         solver.set_config(cfg);
         const bool ok = solver.solve();
-        std::cout << "[direct] tf=" << cfg.tf
+        std::cout << "[direct] n=" << cfg.solver_n
+                  << " tf=" << cfg.tf
                   << " status=" << solver.status() << "\n";
         if (!ok) {
             std::cout << "[direct] infeasible at tf=" << cfg.tf << "\n";
@@ -601,7 +694,8 @@ int main(int argc, char** argv)
         if (tf_max <= tf_min + 1e-6) tf_max = tf_min + 10.0;
     }
     const double tf_step = 0.1;
-    std::cout << "[search] tf_range=[" << tf_min << "," << tf_max << "]\n";
+    std::cout << "[search] n=" << cfg.solver_n
+              << " tf_range=[" << tf_min << "," << tf_max << "]\n";
 
     Bracket br = coarse_bracket(solver, cfg, tf_min, tf_max, tf_step);
     if (br.ms.empty()) {
