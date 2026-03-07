@@ -226,11 +226,20 @@ if __name__ == '__main__':
     _args = parser.parse_args()
     
     if _args.gen:
-        solver_p3.generate_code(code_dir="p3_cpg_solver")
-        _strip_m_link_guard("p3_cpg_solver")
-        solver_p4_n = LCvxSolver(problem_type='p4', N_override=100)
-        solver_p4_n.generate_code(code_dir=f"p4_cpg_solver")
-        _strip_m_link_guard(f"p4_cpg_solver")
+        out_root = "cpg_solver"
+        os.makedirs(out_root, exist_ok=True)
+
+        # P3: keep default N from config, do not override.
+        p3_dir = os.path.join(out_root, "p3")
+        solver_p3.generate_code(code_dir=p3_dir)
+        _strip_m_link_guard(p3_dir)
+
+        # P4: generate multiple N variants by overriding N.
+        for n in (100, 50, 25, 10):
+            p4_dir = os.path.join(out_root, f"p4_n{n}")
+            solver_p4_n = LCvxSolver(problem_type='p4', N_override=n)
+            solver_p4_n.generate_code(code_dir=p4_dir)
+            _strip_m_link_guard(p4_dir)
     elif _args.plot:
         print("Plotting results...")
         solver_p4 = LCvxSolver(problem_type='p4')
