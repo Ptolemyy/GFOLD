@@ -1270,11 +1270,9 @@ int main() {
             // Append a zero-magnitude thrust command to signal end.
             if (lines_emitted == 0) {
                 // ensure t_abs is defined even if no U lines were emitted
-                last_t_abs = active_traj.t.empty() ? base_time : active_traj.t.front();
+                last_t_abs = base_time;
             }
-            const double end_t_base =
-                active_traj.t.empty() ? last_t_abs : active_traj.t.back();
-            const double end_t = end_t_base + dt;
+            const double end_t = last_t_abs + dt;
             const double end_t_out = end_t;
             oss << "U," << 0.0 << "," << 0.0 << "," << 0.0 << "," << end_t_out << "\n";
             recv_lines += 1;
