@@ -12,9 +12,8 @@ namespace py = pybind11;
 
 int main()
 {
-    // Problem setup (single N consistent with generated solver)
+    // Problem setup
     GFOLDConfig cfg;
-    cfg.steps = 100;
     cfg.tf = 57.29;
     cfg.g0 = 3.71;
     cfg.Isp = 2000.0/3.71;
@@ -31,21 +30,38 @@ int main()
     cfg.glide_slope_deg = 30.0;
     cfg.max_angle_deg = 45.0;
 
-    GFOLDSolver solver(cfg);
+    const std::vector<int> n_list = {10, 25, 50, 100};
+    bool ok_n100 = false;
+    GFOLDThrustProfile profile_n100;
+    GFOLDConfig plot_cfg_n100 = cfg;
 
-    auto start = std::chrono::steady_clock::now();
-    const bool ok = solver.solve();
-    auto end = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "[main] N=" << cfg.steps << " solve time: " << duration.count() << " ms\n";
+    for (const int n : n_list) {
+        GFOLDConfig run_cfg = cfg;
+        run_cfg.steps = n;
+        run_cfg.solver_n = n;
 
-    if (!ok) {
-        std::cout << "Infeasible for N=" << cfg.steps << "\n";
-        return 1;
+        GFOLDSolver solver(run_cfg);
+        auto start = std::chrono::steady_clock::now();
+        const bool ok = solver.solve(n);
+        auto end = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+        std::cout << "[main] p4 N=" << n
+                  << " solve time: " << duration.count() << " ms"
+                  << " status=" << solver.status()
+                  << " ok=" << (ok ? 1 : 0) << "\n";
+
+        if (n == 100 && ok) {
+            ok_n100 = true;
+            profile_n100 = solver.compute_thrust_profile();
+            plot_cfg_n100 = solver.config();
+        }
     }
 
-    GFOLDThrustProfile profile = solver.compute_thrust_profile();
-    GFOLDConfig plot_cfg = solver.config(); // capture cfg for plotting bounds
+    if (!ok_n100) {
+        std::cout << "Infeasible for N=100, skip plot.\n";
+        return 1;
+    }
 
     // ---- plot ----
     py::scoped_interpreter guard{};
@@ -53,15 +69,15 @@ int main()
     auto fig = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(10, 6)));
 
     auto ax1 = fig.add_subplot(Args(2, 1, 1));
-    ax1.plot(Args(profile.t, profile.thrust_N), Kwargs("linewidth"_a = 2.0));
-    const double T_max  = plot_cfg.T_max;
-    ax1.plot(Args(profile.t, std::vector<double>(profile.t.size(), T_max * plot_cfg.throttle_max)), Kwargs("linestyle"_a="--"));
-    ax1.plot(Args(profile.t, std::vector<double>(profile.t.size(), T_max * plot_cfg.throttle_min)), Kwargs("linestyle"_a="--"));
+    ax1.plot(Args(profile_n100.t, profile_n100.thrust_N), Kwargs("linewidth"_a = 2.0));
+    const double T_max  = plot_cfg_n100.T_max;
+    ax1.plot(Args(profile_n100.t, std::vector<double>(profile_n100.t.size(), T_max * plot_cfg_n100.throttle_max)), Kwargs("linestyle"_a="--"));
+    ax1.plot(Args(profile_n100.t, std::vector<double>(profile_n100.t.size(), T_max * plot_cfg_n100.throttle_min)), Kwargs("linestyle"_a="--"));
     ax1.set_title(Args("Thrust (N)"));
     ax1.grid(Args(true));
 
     auto ax2 = fig.add_subplot(Args(2, 1, 2));
-    ax2.plot(Args(profile.t, profile.angle_deg), Kwargs("linewidth"_a = 2.0));
+    ax2.plot(Args(profile_n100.t, profile_n100.angle_deg), Kwargs("linewidth"_a = 2.0));
     ax2.set_title(Args("Thrust angle (deg)"));
     ax2.grid(Args(true));
 
