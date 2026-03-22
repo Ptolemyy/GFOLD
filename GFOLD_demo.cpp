@@ -1010,52 +1010,15 @@ int main() {
                 solver_state = ok ? "ok" : ("fail(" + std::to_string(solver.status()) + ")");
                 if (!ok) {
                     if (tf_short) {
-                        const double tf_min = cfg.tf;
-                        const double tf_max = cfg.tf + 1.5;
-                        const double retry_throttle_max = 1.0;
-                        fallback_state = "short_tf_search";
-
-                        GFOLDConfig search_cfg = cfg;
-                        search_cfg.throttle_max = retry_throttle_max;
-                        search_cfg.glide_slope_deg = nominal_glide_slope_deg;
-                        SearchResult retry = find_best_tf(search_cfg, tf_min, tf_max, 4, false);
-                        if (!retry.feasible) {
-                            fallback_state = "short_tf_infeasible";
-                            const bool at_min_solver_n = (cfg.solver_n <= 10);
-                            if (at_min_solver_n) {
-                                fallback_enabled = false;
-                                mode1_solver_enabled = false;
-                                write_compute_finish(recv_path, 2);
-                                continue;
-                            }
-                            fallback_enabled = false;
-                            mode1_solver_enabled = false;
-                        } else {
-                            fallback_state = "short_tf_ok";
-                            cfg.tf = retry.best_tf;
-                            apply_tf_rules(cfg, retry_throttle_max, nominal_glide_slope_deg);
-                            apply_mode1_n_policy(cfg, recompute_time);
-                            log_mode1_cfg(cfg);
-                            best_tf = retry.best_tf;
-                            solver.set_config(cfg);
-                            mode1_solver_n = cfg.solver_n;
-                            ok = solver.solve(mode1_solver_n);
-                            if (!ok) {
-                                solver_state = "fail(" + std::to_string(solver.status()) + ")";
-                                fallback_state = "short_tf_solve_fail";
-                                fallback_enabled = false;
-                                mode1_solver_enabled = false;
-                            } else {
-                                solver_state = "ok";
-                            }
-                        }
-                    } else if (fallback_enabled) {
+                        cfg.throttle_max = 1.0;
+                    }
+                    if (fallback_enabled) {
                         const double tf_min = cfg.tf;
                         const double tf_max = cfg.tf + 1.5;
                         fallback_state = "search";
 
                         GFOLDConfig search_cfg = cfg;
-                        search_cfg.throttle_max = nominal_throttle_max;
+                        search_cfg.throttle_max = cfg.throttle_max;
                         search_cfg.glide_slope_deg = nominal_glide_slope_deg;
                         SearchResult retry = find_best_tf(search_cfg, tf_min, tf_max, 4, false);
                         if (!retry.feasible) {
@@ -1078,7 +1041,8 @@ int main() {
                         } else {
                             fallback_state = "ok";
                             cfg.tf = retry.best_tf;
-                            apply_tf_rules(cfg, nominal_throttle_max, nominal_glide_slope_deg);
+                            const double retry_throttle_max = cfg.throttle_max;
+                            apply_tf_rules(cfg, retry_throttle_max, nominal_glide_slope_deg);
                             apply_mode1_n_policy(cfg, recompute_time);
                             log_mode1_cfg(cfg);
                             best_tf = retry.best_tf;
@@ -1098,7 +1062,7 @@ int main() {
                             }
                         }
                     } else {
-                        fallback_state = tf_short ? "auto_disabled(tf<5)" : "disabled";
+                        fallback_state = "disabled";
                     }
                 }
             } else {

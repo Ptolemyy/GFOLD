@@ -687,21 +687,14 @@ int main(int argc, char** argv)
 
     double tf_min = 1.0;
     double tf_max = 6.0;
-    double search_center = std::numeric_limits<double>::quiet_NaN();
-    if (std::isfinite(cfg.tf) && cfg.tf > 0.0) {
-        search_center = cfg.tf;
-    } else if (has_user_center && std::isfinite(user_center)) {
-        search_center = user_center;
-    }
-    if (std::isfinite(search_center)) {
-        tf_min = search_center - 5.0;
-        tf_max = search_center + 5.0;
+    if (has_user_center && std::isfinite(user_center)) {
+        tf_min = user_center - 5.0;
+        tf_max = user_center + 5.0;
         if (tf_min < 0.1) tf_min = 0.1;
         if (tf_max <= tf_min + 1e-6) tf_max = tf_min + 10.0;
     }
     const double tf_step = 0.1;
     std::cout << "[search] n=" << cfg.solver_n
-              << " center=" << (std::isfinite(search_center) ? search_center : cfg.tf)
               << " tf_range=[" << tf_min << "," << tf_max << "]\n";
 
     Bracket br = coarse_bracket(solver, cfg, tf_min, tf_max, tf_step);

@@ -1,4 +1,7 @@
 // ===== Defaults (can be overridden by config.txt via RUNPATH) =====
+// LaunchPad reference coordinates:
+//   SET LAT0 TO -0.0972.
+//   SET LON0 TO -74.5577.
 SET LAT0 TO -0.0972.
 SET LON0 TO -74.5577.
 
@@ -10,6 +13,7 @@ SET MODE0_t TO 0.48.       // mode0 virtual altitude offset (m)
 SET MODE0_A TO 9.4.       // mode0 acceleration for VU correction (m/s^2)
 SET UP_BIAS_M TO -3.       // altitude bias added to reported UP_M in mode0/mode1
 SET CUTDOWN_ALTITUDE TO 2.0. // hard engine cutoff altitude using raw UP_M (no bias)
+SET U_ZERO_SPEED TO 8.0.   // trigger U zero when total speed drops below this (m/s)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
 SET RECOMPUTE_INTERVAL TO 1.0.  // seconds between recompute triggers
 SET RECOMPUTE_TIME TO -1.       // measured recompute latency (s)
@@ -28,18 +32,17 @@ SET AREA_trans TO CONSTANT:PI * CYL_HEIGHT * CYL_RADIUS / 2 + 15.
 SET AREA_axis TO 1.63.
 // ===== Optional config override =====
 // Provide a config.txt in the same directory with lines like:
+//   LaunchPad coordinates:
 //   SET LAT0 TO -0.096779520816.
-//   SET LON0 TO -74.617401641155.  LAUNCHPAD
+//   SET LON0 TO -74.617401641155.
 //   SET ALT0 TO 0.
 //   SET THROT1 TO 0.2.
 //   SET THROT2 TO 0.8.
 //   SET THETA_DEG TO 45.
 //   SET YGS_DEG TO 30.
 //   SET MODE0_H TO 3.5.
-//   SET MODE0_A TO 9.8.  
+//   SET MODE0_A TO 9.8.
 
-//   SET LAT0 TO -0.096706.
-//   SET LON0 TO -74.618806. VAB
 SET CONFIG_FILE TO "config.txt".
 IF EXISTS(CONFIG_FILE) { RUNPATH(CONFIG_FILE). }.
 
@@ -476,6 +479,14 @@ FUNCTION MAIN_TICK {
   SET NORTH_M TO STATE[1].
   SET UP_M TO STATE[2].
   SET SPEED TO STATE[6].
+
+  IF SPEED < U_ZERO_SPEED {
+    SET HAS_U_LIST TO 0.
+    SET RECOMPUTE_ENABLED TO 0.
+    SET RECOMPUTE_PENDING TO 0.
+    TRIGGER_U_ZERO().
+    RETURN.
+  }.
 
   IF UP_M < CUTDOWN_ALTITUDE {
     SET HAS_U_LIST TO 0.
