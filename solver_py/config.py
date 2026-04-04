@@ -25,17 +25,17 @@ class ParamsLCVX:
 
 params = ParamsLCVX(
         N=100,
-        dt=0.30154781, #tf/N
-        g=np.array([-9.81, 0.0, 0.0]),
-        a = 1/(262.99*9.81),
+        dt=0.5729, #tf/N
+        g=np.array([-3.71, 0.0, 0.0]),
+        a = 0.0005,
     )
 bnd = Boundary(
-    r0=np.array([1422.7, -1.6, 0.9]),
-    v0=np.array([-7.38, 0.0, 0.0]),
-    m0=5600.0,
+    r0=np.array([2400.0, 450.0, -330.0]),
+    v0=np.array([-10.0, -40.0, 10.0]),
+    m0=2000.0,
     throt1= 0.2, #throt
     throt2= 0.8,
-    T_max= 176600.0,
+    T_max= 24000.0,
     rT=np.array([0.0, 0.0, 0.0]),
     vT=np.array([0.0, 0.0, 0.0]),
     V_max = 90.0,

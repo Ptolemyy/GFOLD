@@ -138,7 +138,7 @@ class LCvxSolver:
         for k in range(0, N):
             # Dynamics --> v = A(w)*x + B*(g + u)
             if k != N - 1:
-                acc = (u[k+1, :] + u[k, :]) / 2
+                acc = (u[k, :] + u[k+1, :]) / 2
                 constraints += [
                     r[k+1, :] == r[k, :] + (v[k, :] + v[k+1, :]) * dt / 2, #+ (acc * dt_squared + g_dt_sq) * (1 / 2),
                     v[k+1, :] == v[k, :] + acc * dt + g_dt,
