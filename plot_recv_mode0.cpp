@@ -54,6 +54,12 @@ struct SeriesTV {
     std::vector<double> v;
 };
 
+struct ErrorNormSeries {
+    std::vector<double> dt;
+    std::vector<double> pos_norm;
+    std::vector<double> vel_norm;
+};
+
 struct Mode1SheetRows {
     int idx = 0;
     std::string name;
@@ -240,6 +246,193 @@ static SeriesTV build_tv_series_from_recv(const std::vector<CsvRunRow>& rows, in
         s.v.push_back(v);
     }
     return s;
+}
+
+struct RvSample {
+    double t = std::numeric_limits<double>::quiet_NaN();
+    double rx = std::numeric_limits<double>::quiet_NaN();
+    double ry = std::numeric_limits<double>::quiet_NaN();
+    double rz = std::numeric_limits<double>::quiet_NaN();
+    double vx = std::numeric_limits<double>::quiet_NaN();
+    double vy = std::numeric_limits<double>::quiet_NaN();
+    double vz = std::numeric_limits<double>::quiet_NaN();
+};
+
+static std::vector<RvSample> build_rv_samples(const std::vector<CsvRunRow>& rows) {
+    std::vector<RvSample> out;
+    out.reserve(rows.size());
+    for (const auto& r : rows) {
+        if (!std::isfinite(r.t) ||
+            !std::isfinite(r.rx) || !std::isfinite(r.ry) || !std::isfinite(r.rz) ||
+            !std::isfinite(r.vx) || !std::isfinite(r.vy) || !std::isfinite(r.vz)) {
+            continue;
+        }
+        RvSample s;
+        s.t = r.t;
+        s.rx = r.rx;
+        s.ry = r.ry;
+        s.rz = r.rz;
+        s.vx = r.vx;
+        s.vy = r.vy;
+        s.vz = r.vz;
+        out.push_back(s);
+    }
+    std::sort(out.begin(), out.end(), [](const auto& a, const auto& b) { return a.t < b.t; });
+    return out;
+}
+
+static bool interpolate_rv_at(
+    const std::vector<RvSample>& series,
+    double t_query,
+    std::size_t& cursor,
+    RvSample& out) {
+    if (series.empty()) return false;
+    if (t_query < series.front().t || t_query > series.back().t) return false;
+
+    while (cursor + 1 < series.size() && series[cursor + 1].t < t_query) {
+        ++cursor;
+    }
+    if (cursor >= series.size()) cursor = series.size() - 1;
+
+    const RvSample& s0 = series[cursor];
+    if (cursor + 1 >= series.size()) {
+        out = s0;
+        return true;
+    }
+
+    const RvSample& s1 = series[cursor + 1];
+    const double dt = s1.t - s0.t;
+    if (dt <= 1e-12) {
+        out = s0;
+        return true;
+    }
+
+    double a = (t_query - s0.t) / dt;
+    if (a < 0.0) a = 0.0;
+    if (a > 1.0) a = 1.0;
+
+    out.t = t_query;
+    out.rx = s0.rx + (s1.rx - s0.rx) * a;
+    out.ry = s0.ry + (s1.ry - s0.ry) * a;
+    out.rz = s0.rz + (s1.rz - s0.rz) * a;
+    out.vx = s0.vx + (s1.vx - s0.vx) * a;
+    out.vy = s0.vy + (s1.vy - s0.vy) * a;
+    out.vz = s0.vz + (s1.vz - s0.vz) * a;
+    return true;
+}
+
+static ErrorNormSeries build_recv_mode0_error_norm_series(
+    const std::vector<CsvRunRow>& recv_rows,
+    const std::vector<CsvRunRow>& mode0_rows) {
+    ErrorNormSeries out;
+    const std::vector<RvSample> recv = build_rv_samples(recv_rows);
+    const std::vector<RvSample> mode0 = build_rv_samples(mode0_rows);
+    if (recv.empty() || mode0.empty()) return out;
+
+    std::size_t mode0_cursor = 0;
+    bool has_t0 = false;
+    double t0 = 0.0;
+    for (const auto& r : recv) {
+        RvSample m;
+        if (!interpolate_rv_at(mode0, r.t, mode0_cursor, m)) continue;
+        if (!has_t0) {
+            t0 = r.t;
+            has_t0 = true;
+        }
+        const double drx = r.rx - m.rx;
+        const double dry = r.ry - m.ry;
+        const double drz = r.rz - m.rz;
+        const double dvx = r.vx - m.vx;
+        const double dvy = r.vy - m.vy;
+        const double dvz = r.vz - m.vz;
+        out.dt.push_back(r.t - t0);
+        out.pos_norm.push_back(std::sqrt(drx * drx + dry * dry + drz * drz));
+        out.vel_norm.push_back(std::sqrt(dvx * dvx + dvy * dvy + dvz * dvz));
+    }
+    return out;
+}
+
+static std::vector<RvSample> build_rv_samples_from_segment(const Mode1Segment& seg) {
+    std::vector<RvSample> out;
+    const std::size_t n = std::min(
+        seg.t.size(),
+        std::min(
+            seg.rx.size(),
+            std::min(
+                seg.ry.size(),
+                std::min(
+                    seg.rz.size(),
+                    std::min(seg.vx.size(), std::min(seg.vy.size(), seg.vz.size()))))));
+    out.reserve(n);
+    for (std::size_t i = 0; i < n; ++i) {
+        if (!std::isfinite(seg.t[i]) ||
+            !std::isfinite(seg.rx[i]) || !std::isfinite(seg.ry[i]) || !std::isfinite(seg.rz[i]) ||
+            !std::isfinite(seg.vx[i]) || !std::isfinite(seg.vy[i]) || !std::isfinite(seg.vz[i])) {
+            continue;
+        }
+        RvSample s;
+        s.t = seg.t[i];
+        s.rx = seg.rx[i];
+        s.ry = seg.ry[i];
+        s.rz = seg.rz[i];
+        s.vx = seg.vx[i];
+        s.vy = seg.vy[i];
+        s.vz = seg.vz[i];
+        out.push_back(s);
+    }
+    std::sort(out.begin(), out.end(), [](const auto& a, const auto& b) { return a.t < b.t; });
+    return out;
+}
+
+static ErrorNormSeries build_recv_segment_error_norm_series(
+    const std::vector<CsvRunRow>& recv_rows,
+    const std::vector<Mode1Segment>& segments) {
+    ErrorNormSeries out;
+    const std::vector<RvSample> recv = build_rv_samples(recv_rows);
+    if (recv.empty() || segments.empty()) return out;
+
+    std::vector<std::vector<RvSample>> refs;
+    refs.reserve(segments.size());
+    for (const auto& seg : segments) {
+        auto s = build_rv_samples_from_segment(seg);
+        if (s.size() < 2) continue;
+        refs.push_back(std::move(s));
+    }
+    if (refs.empty()) return out;
+
+    std::vector<std::size_t> cursors(refs.size(), 0);
+    bool has_t0 = false;
+    double t0 = 0.0;
+    for (const auto& r : recv) {
+        int matched = -1;
+        for (int i = 0; i < static_cast<int>(refs.size()); ++i) {
+            const auto& s = refs[static_cast<std::size_t>(i)];
+            if (r.t >= s.front().t && r.t <= s.back().t) {
+                matched = i;
+                break;
+            }
+        }
+        if (matched < 0) continue;
+
+        RvSample ref;
+        const std::size_t idx = static_cast<std::size_t>(matched);
+        if (!interpolate_rv_at(refs[idx], r.t, cursors[idx], ref)) continue;
+
+        if (!has_t0) {
+            t0 = r.t;
+            has_t0 = true;
+        }
+        const double drx = r.rx - ref.rx;
+        const double dry = r.ry - ref.ry;
+        const double drz = r.rz - ref.rz;
+        const double dvx = r.vx - ref.vx;
+        const double dvy = r.vy - ref.vy;
+        const double dvz = r.vz - ref.vz;
+        out.dt.push_back(r.t - t0);
+        out.pos_norm.push_back(std::sqrt(drx * drx + dry * dry + drz * drz));
+        out.vel_norm.push_back(std::sqrt(dvx * dvx + dvy * dvy + dvz * dvz));
+    }
+    return out;
 }
 
 static std::vector<double> collect_breakpoints_from_recv(const std::vector<CsvRunRow>& recv_rows) {
@@ -432,6 +625,7 @@ bool plot_from_run_csv(const std::string& run_csv_path) {
     if (parsed.sheets.empty()) return false;
 
     const CsvSheetBlock* recv_sheet = find_sheet(parsed, "receive");
+    const CsvSheetBlock* mode0_sheet = find_sheet(parsed, "mode0");
     if (!recv_sheet) return false;
     const std::vector<CsvRunRow>& recv_rows = recv_sheet->rows;
     if (recv_rows.empty()) return false;
@@ -510,6 +704,42 @@ bool plot_from_run_csv(const std::string& run_csv_path) {
     plot_component_overlay(ax_vx, "v_x vs t", recv_vx, segments, breakpoints, 3);
     plot_component_overlay(ax_vy, "v_y vs t", recv_vy, segments, breakpoints, 4);
     plot_component_overlay(ax_vz, "v_z vs t", recv_vz, segments, breakpoints, 5);
+
+    // Figure 3:
+    // New window for per-dt norm distance between recv and mode0.
+    {
+        ErrorNormSeries err = build_recv_segment_error_norm_series(recv_rows, segments);
+        std::string ref_name = "stitched_mode1";
+        if (err.dt.empty() && mode0_sheet && !mode0_sheet->rows.empty()) {
+            err = build_recv_mode0_error_norm_series(recv_rows, mode0_sheet->rows);
+            ref_name = "mode0";
+        }
+        if (!err.dt.empty()) {
+            const std::string pos_label = "||recv_r - " + ref_name + "_r||";
+            const std::string vel_label = "||recv_v - " + ref_name + "_v||";
+            auto fig3 = plt.figure(Args(), Kwargs("figsize"_a = py::make_tuple(12, 8)));
+            auto ax_pos = fig3.add_subplot(Args(2, 1, 1));
+            auto ax_vel = fig3.add_subplot(Args(2, 1, 2));
+
+            ax_pos.plot(
+                Args(err.dt, err.pos_norm),
+                Kwargs("label"_a = pos_label, "linewidth"_a = 2.0, "color"_a = "tab:purple"));
+            ax_pos.set_title(Args("Position Distance Error vs dt (clipped reference)"));
+            ax_pos.set_xlabel(Args("dt from first recv sample (s)"));
+            ax_pos.set_ylabel(Args("distance (m)"));
+            ax_pos.grid(Args(true));
+            ax_pos.legend();
+
+            ax_vel.plot(
+                Args(err.dt, err.vel_norm),
+                Kwargs("label"_a = vel_label, "linewidth"_a = 2.0, "color"_a = "tab:brown"));
+            ax_vel.set_title(Args("Velocity Distance Error vs dt (clipped reference)"));
+            ax_vel.set_xlabel(Args("dt from first recv sample (s)"));
+            ax_vel.set_ylabel(Args("distance (m/s)"));
+            ax_vel.grid(Args(true));
+            ax_vel.legend();
+        }
+    }
 
     plt.show();
     return true;

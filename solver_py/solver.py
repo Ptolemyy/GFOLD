@@ -132,7 +132,12 @@ class LCvxSolver:
         if program == 3:
             constraints += [r[-1, 0] == 0]
         elif program == 4:
-            constraints += [r[-1, :] == rp3]
+            if N == 10:
+                # For N=10, relax terminal position to y/z-only tolerance.
+                constraints += [cp.norm(r[-1, 1:3] - rp3[1:3]) <= 6.0]
+                constraints += [r[-1, 0] == rp3[0]]
+            else:
+                constraints += [r[-1, :] == rp3]
             #con += [norm(E*(x[0:3,N-1]-rf))<=norm(rp3-rf)] # CONVEX <= CONVEX (?)
 
         for k in range(0, N):

@@ -11,16 +11,16 @@ SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
 SET MODE0_t TO 0.48.       // mode0 virtual altitude offset (m)
 SET MODE0_A TO 9.4.       // mode0 acceleration for VU correction (m/s^2)
-SET UP_BIAS_M TO -3.       // altitude bias added to reported UP_M in mode0/mode1
+SET UP_BIAS_M TO -4.        // altitude bias added to reported UP_M in mode0/mode1
 SET CUTDOWN_ALTITUDE TO 2.0. // hard engine cutoff altitude using raw UP_M (no bias)
-SET U_ZERO_SPEED TO 8.0.   // trigger U zero when total speed drops below this (m/s)
+SET U_ZERO_SPEED TO 1.   // trigger U zero when total speed drops below this (m/s)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
 SET RECOMPUTE_INTERVAL TO 1.0.  // seconds between recompute triggers
 SET RECOMPUTE_TIME TO -1.       // measured recompute latency (s)
 SET LAST_RECOMPUTE_TIME TO 0.
 SET RECOMPUTE_BEGIN_TIME TO -1.   // wall-clock start time for latest mode1 recompute request
 SET RESEND_TIME TO 0.1.      // resend state interval when waiting for reply
-SET DEPLOY_GEAR_TIME TO 8.0. // deploy gear when remain_tf <= this value
+SET DEPLOY_GEAR_TIME TO 7.5. // deploy gear when remain_tf <= this value
 
 SET CYL_HEIGHT TO 3.8.
 SET CYL_RADIUS TO 1.3.
@@ -266,7 +266,10 @@ FUNCTION TRIGGER_U_ZERO {
   SET STEER_CMD TO PFRAME_TO_XYZ(V(0,0,1), GET_LH_ENU_AXES(BODY:POSITION:NORMALIZED)).
   LOCK STEERING TO STEER_CMD.
   WAIT 3.
+  SET ELAPSED_SEC TO TIME:SECONDS - TIME0_SEC.
+  PRINT_TICK().
   RCS OFF.
+  UNLOCK STEERING.
 }
 
 // Send current state to PC.
@@ -413,34 +416,56 @@ FUNCTION READ_SOLVER_OUTPUT {
 // Select U based on elapsed time since U_START_TIME (no U_INDEX).
 FUNCTION SELECT_U {
   IF HAS_U_LIST = 0 { RETURN. }.
-  // derive horizon each select to be robust to changed lists
-  SET U_TF TO 0.
-  IF U_LIST:LENGTH > 1 {
-    SET U_TF TO U_LIST[U_LIST:LENGTH - 1][3] - U_LIST[0][3].
-    IF U_TF < 0 { SET U_TF TO -U_TF. }.
-  } ELSE {
-    SET U_TF TO LOOP_DT.
-  }.
-  IF U_TF <= 0 { RETURN. }.
+  IF U_LIST:LENGTH = 0 { RETURN. }.
 
   LOCAL t_elapsed IS ELAPSED_SEC - U_START_TIME.
   IF t_elapsed < 0 { SET t_elapsed TO 0. }.
   // Map kOS elapsed to solver absolute timeline starting at U_T0
   LOCAL t_abs IS U_T0 + t_elapsed.
-  LOCAL idx IS FLOOR(((t_abs - U_T0) / U_TF) * U_LIST:LENGTH).
-  IF idx < 0 { SET idx TO 0. }.
-  IF idx >= U_LIST:LENGTH { SET idx TO U_LIST:LENGTH - 1. }.
-  LOCAL U_CUR IS U_LIST[idx].
-  LOCAL U_UP IS U_CUR[0].
-  LOCAL U_NORTH IS U_CUR[1].
-  LOCAL U_EAST IS U_CUR[2].
-  SET U_MAG TO SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
-  IF U_MAG <= 0 {
-//    PRINT "U_ZERO_STOP".
+
+  LOCAL LAST_IDX IS U_LIST:LENGTH - 1.
+  LOCAL U_LAST IS U_LIST[LAST_IDX].
+  LOCAL T_LAST IS U_LAST[3].
+  IF t_abs > T_LAST {
     TRIGGER_U_ZERO().
-//    PRINT "PROGRAM_END".
     RETURN.
   }.
+
+  SET U_TF TO T_LAST - U_LIST[0][3].
+  IF U_TF < 0 { SET U_TF TO -U_TF. }.
+  IF U_TF = 0 { SET U_TF TO LOOP_DT. }.
+
+  LOCAL U_UP IS U_LAST[0].
+  LOCAL U_NORTH IS U_LAST[1].
+  LOCAL U_EAST IS U_LAST[2].
+
+  IF U_LIST:LENGTH > 1 {
+    LOCAL IDX0 IS 0.
+    UNTIL IDX0 >= LAST_IDX {
+      LOCAL P0 IS U_LIST[IDX0].
+      LOCAL P1 IS U_LIST[IDX0 + 1].
+      LOCAL T0 IS P0[3].
+      LOCAL T1 IS P1[3].
+      IF t_abs <= T1 {
+        LOCAL ratio IS 0.
+        LOCAL DT IS T1 - T0.
+        IF DT > 0 {
+          SET ratio TO (t_abs - T0) / DT.
+        } ELSE {
+          SET ratio TO 0.
+        }.
+        IF ratio < 0 { SET ratio TO 0. }.
+        IF ratio > 1 { SET ratio TO 1. }.
+        SET U_UP TO P0[0] + (P1[0] - P0[0]) * ratio.
+        SET U_NORTH TO P0[1] + (P1[1] - P0[1]) * ratio.
+        SET U_EAST TO P0[2] + (P1[2] - P0[2]) * ratio.
+        BREAK.
+      }.
+      SET IDX0 TO IDX0 + 1.
+    }.
+  }.
+
+  SET U_MAG TO SQRT(U_UP * U_UP + U_NORTH * U_NORTH + U_EAST * U_EAST).
   APPLY_THRUST(U_UP, U_NORTH, U_EAST).
 }
 
@@ -549,6 +574,7 @@ FUNCTION PRINT_TICK {
   PRINT "loop_time=" + ROUND(LOOP_TIME,4).
   PRINT "err=" + ROUND(ERR_M,1).
   PRINT "up=" + ROUND(UP_M,2).
+  PRINT "up_bias=" + ROUND(UP_M + UP_BIAS_M,2).
   PRINT "u=" + ROUND(U_MAG,2).
   PRINT "speed=" + ROUND(SPEED,2).
   PRINT "remain_tf=" + ROUND(REMAIN_TF,3).
@@ -578,7 +604,7 @@ WHEN RUN_ACTIVE = 1 AND TIME:SECONDS >= SEND_STATE_TIME + RESEND_TIME THEN {
   SEND_STATE("INFO").
   PRESERVE.
 }.
-WHEN RUN_ACTIVE = 1 AND TIME:SECONDS >= LAST_PRINT_TICK + LOOP_DT THEN {
+WHEN TIME:SECONDS >= LAST_PRINT_TICK + LOOP_DT THEN {
   SET LAST_PRINT_TICK TO TIME:SECONDS.
   PRINT_TICK().
   PRESERVE.

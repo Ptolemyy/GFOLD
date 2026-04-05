@@ -1003,6 +1003,7 @@ int main() {
             bool ok = false;
             std::string solver_state = "disabled";
             std::string fallback_state = "not_used";
+            bool fallback_called = false;
             TrajectoryCache active_traj;
             if (mode1_solver_enabled) {
                 int mode1_solver_n = cfg.solver_n;
@@ -1013,6 +1014,7 @@ int main() {
                         cfg.throttle_max = 1.0;
                     }
                     if (fallback_enabled) {
+                        fallback_called = true;
                         const double tf_min = cfg.tf;
                         const double tf_max = cfg.tf + 1.5;
                         fallback_state = "search";
@@ -1026,7 +1028,6 @@ int main() {
                             const bool at_min_solver_n = (cfg.solver_n <= 10);
                             if (at_min_solver_n) {
                                 fallback_enabled = false;
-                                mode1_solver_enabled = false;
 //                                std::cerr << "[mode1] fallback infeasible at min solver n="
 //                                          << cfg.solver_n
 //                                          << ", return COMPUTE_FINISH,2\n";
@@ -1034,7 +1035,6 @@ int main() {
                                 continue;
                             }
                             fallback_enabled = false;
-                            mode1_solver_enabled = false;
 //                            std::cerr << "[mode1] fallback find_best_tf infeasible in ["
 //                                      << tf_min << ", " << tf_max
 //                                      << "], disable fallback and solver, reuse last trajectory\n";
@@ -1053,7 +1053,6 @@ int main() {
                                 solver_state = "fail(" + std::to_string(solver.status()) + ")";
                                 fallback_state = "solve_fail";
                                 fallback_enabled = false;
-                                mode1_solver_enabled = false;
 //                                std::cerr << "[mode1] fallback solve failed, status="
 //                                          << solver.status() << " tf=" << cfg.tf
 //                                          << ", disable fallback and solver, reuse last trajectory\n";
@@ -1103,8 +1102,6 @@ int main() {
                         fail_fallback_state = fallback_state;
                         post_fail_capture_active = true;
                         fallback_enabled = false;
-                        mode1_solver_enabled = false;
-                        lock_last_traj_after_final_fail = true;
                     }
                 }
             }
@@ -1140,6 +1137,8 @@ int main() {
                 active_traj.ry = std::move(sol.ry);
                 active_traj.rz = std::move(sol.rz);
                 active_traj.valid = true;
+                // Re-enable fallback once a fresh solver result is valid.
+                fallback_enabled = true;
             } else {
                 const bool cache_ready =
                     last_traj.valid &&
@@ -1229,7 +1228,6 @@ int main() {
             }
 
             const int steps = active_traj.steps;
-            const double dt = active_traj.tf / static_cast<double>(steps);
             const std::vector<double>& ux = active_traj.ux;
             const std::vector<double>& uy = active_traj.uy;
             const std::vector<double>& uz = active_traj.uz;
@@ -1239,7 +1237,6 @@ int main() {
             int recv_lines = 0;
             oss << "COMPUTE_FINISH,1\n";
             recv_lines += 1;
-            double last_t_abs = active_traj.t.empty() ? base_time : active_traj.t.front();
             auto emit_indices = build_sample_indices(steps, max_lines);
 
             std::cout << "\x1B[2J\x1B[H";
@@ -1250,20 +1247,19 @@ int main() {
             const int mode1_solver_n = (cfg.solver_n > 0) ? cfg.solver_n : steps;
             const double tf_window = active_traj.tf * 10.0 / static_cast<double>(mode1_solver_n);
             std::cout << "[mode1] solver=" << solver_state
-                      << " fallback=" << fallback_state
+                      << " fallback_enabled=" << (fallback_enabled ? 1 : 0)
+                      << " fallback_called=" << (fallback_called ? 1 : 0)
                       << " remaining_tf=" << active_traj.tf
                       << " n=" << mode1_solver_n
                       << " tf10_over_n=" << tf_window
                       << " best_m=" << best_m_to_print << "\n";
 
-            int lines_emitted = 0;
             for (int idx : emit_indices) {
                 const double up = ux[idx];
                 const double north = uy[idx];
                 const double east = uz[idx];
                 const double t_abs = active_traj.t[idx];
                 const double t_out = t_abs;
-                last_t_abs = t_abs;
                 const double mag = std::sqrt(up * up + north * north + east * east);
                 std::cout << "[mode1] U[" << idx << "] up=" << up
                           << " north=" << north
@@ -1272,17 +1268,7 @@ int main() {
                           << " t=" << t_out << "\n";
                 oss << "U," << up << "," << north << "," << east << "," << t_out << "\n";
                 recv_lines += 1;
-                lines_emitted += 1;
             }
-            // Append a zero-magnitude thrust command to signal end.
-            if (lines_emitted == 0) {
-                // ensure t_abs is defined even if no U lines were emitted
-                last_t_abs = base_time;
-            }
-            const double end_t = last_t_abs + dt;
-            const double end_t_out = end_t;
-            oss << "U," << 0.0 << "," << 0.0 << "," << 0.0 << "," << end_t_out << "\n";
-            recv_lines += 1;
             oss << "REMAIN_TF," << active_traj.tf << "\n";
             recv_lines += 1;
             if (!atomic_write(recv_path, oss.str())) {
