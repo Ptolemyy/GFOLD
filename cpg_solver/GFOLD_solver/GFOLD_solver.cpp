@@ -46,6 +46,7 @@ GFOLDBackendConfig to_backend_cfg(const GFOLDConfig& cfg) {
     out.v0[1] = cfg.v0[1];
     out.v0[2] = cfg.v0[2];
     out.glide_slope_deg = cfg.glide_slope_deg;
+    out.cot_y_gs = cfg.cot_y_gs;
     out.max_angle_deg = cfg.max_angle_deg;
     return out;
 }

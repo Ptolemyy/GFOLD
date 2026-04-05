@@ -26,6 +26,7 @@ struct GFOLDConfig {
 
     // Constraints
     double glide_slope_deg = 30.0; // glide slope angle (deg)
+    double cot_y_gs = std::numeric_limits<double>::quiet_NaN(); // optional cot(glide_slope)
     double max_angle_deg   = 45.0; // thrust cone half-angle (deg)
 };
 

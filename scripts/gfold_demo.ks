@@ -303,13 +303,13 @@ FUNCTION SEND_STATE {
   IF INFO_IN = "0" {
     // Full mode0 payload includes guidance knobs.
     SET OUT_LINE TO INFO_IN + "," +
-                  ROUND(SEND_UP_M + UP_BIAS_M,1) + "," +
-                  ROUND(NORTH_M,1) + "," +
-                  ROUND(EAST_M,1) + "," +
-                  ROUND(SEND_VU,2) + "," +
-                  ROUND(VN,2) + "," +
-                  ROUND(VE,2) + "," +
-                  ROUND(SPEED,2) + "," +
+                  ROUND(SEND_UP_M + UP_BIAS_M,3) + "," +
+                  ROUND(NORTH_M,3) + "," +
+                  ROUND(EAST_M,3) + "," +
+                  ROUND(SEND_VU,3) + "," +
+                  ROUND(VN,3) + "," +
+                  ROUND(VE,3) + "," +
+                  ROUND(SPEED,3) + "," +
                   ROUND(THRUST_MAX,3) + "," +
                   ROUND(ISP_CUR,3) + "," +
                   ROUND(MASS_WET,3) + "," +

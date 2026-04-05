@@ -27,7 +27,17 @@ void apply_initial_conditions(const GFOLDBackendConfig& cfg) {
     cpg_update_v0(2, cfg.v0[2]);
 
     cpg_update_log_m0(std::log(cfg.m0));
-    cpg_update_sin_y_gs(std::sin(cfg.glide_slope_deg * kPi / 180.0));
+    const double glide_rad = cfg.glide_slope_deg * kPi / 180.0;
+    const bool has_cot_override = std::isfinite(cfg.cot_y_gs) && (cfg.cot_y_gs > 0.0);
+#if defined(GFOLD_BACKEND_GLIDE_PARAM_COT)
+    const double cot_y_gs = has_cot_override ? cfg.cot_y_gs : (1.0 / std::tan(glide_rad));
+    cpg_update_cot_y_gs(cot_y_gs);
+#else
+    const double sin_y_gs = has_cot_override
+        ? (1.0 / std::sqrt(1.0 + cfg.cot_y_gs * cfg.cot_y_gs))
+        : std::sin(glide_rad);
+    cpg_update_sin_y_gs(sin_y_gs);
+#endif
     cpg_update_cos_theta_deg(std::cos(cfg.max_angle_deg * kPi / 180.0));
 }
 

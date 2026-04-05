@@ -60,6 +60,7 @@ class LCvxSolver:
         rho2_ = bnd.throt2 * bnd.T_max
         cos_theta_deg_ = np.cos(np.deg2rad(bnd.theta_deg))
         sin_y_gs_ = np.sin(np.deg2rad(bnd.y_gs))
+        cot_y_gs_ = 1.0 / np.tan(np.deg2rad(bnd.y_gs))
 
         N = params.N
         dt = cp.Parameter(name='dt', value=params.dt, nonneg=True)
@@ -74,6 +75,7 @@ class LCvxSolver:
         v0 = cp.Parameter(3, name='v0', value=bnd.v0)
         log_m0 = cp.Parameter(name='log_m0', value=log_m0_, nonneg=True)
         sin_y_gs = cp.Parameter(name='sin_y_gs', value=sin_y_gs_, nonneg=True)
+        cot_y_gs = cp.Parameter(name='cot_y_gs', value=cot_y_gs_, nonneg=True)
         cos_theta_deg = cp.Parameter(name='cos_theta_deg', value=cos_theta_deg_)
         rT = bnd.rT
         vT = bnd.vT
@@ -134,7 +136,7 @@ class LCvxSolver:
         elif program == 4:
             if N == 10:
                 # For N=10, relax terminal position to y/z-only tolerance.
-                constraints += [cp.norm(r[-1, 1:3] - rp3[1:3]) <= 6.0]
+                constraints += [cp.norm(r[-1, 1:3] - rp3[1:3]) <= 2.0]
                 constraints += [r[-1, 0] == rp3[0]]
             else:
                 constraints += [r[-1, :] == rp3]
@@ -149,9 +151,15 @@ class LCvxSolver:
                     v[k+1, :] == v[k, :] + acc * dt + g_dt,
                 ]
                 constraints += [z[k+1] == z[k] - (a_dt / 2) * (s[k] + s[k+1])]  # mass decreases
-            #constraints += [cp.norm(E*(r[k, :]- rp3)) - c.T*(r[k, :]- rp3) <= 0 ] # glideslope, full generality # (5)
-            #constraints += [cp.norm((r[k,:]-rT)[0:2]) - c.T[0]*(r[k,0]-rT[0]) <= 0] # glideslope, specific, but faster
-            constraints += [r[k, 0] >= cp.norm(r[k, :]) * sin_y_gs]
+            # For N=10 in P4, anchor glide-slope cone at the optimized terminal point r[-1,:].
+            # SOC form keeps convexity: ||(y,z)-(y_f,z_f)|| <= (x-x_f) * cot(gamma).
+            if program == 4 and N == 10:
+                constraints += [r[k, 0] >= r[-1, 0]]
+                constraints += [cp.norm(r[k, 1:3] - r[-1, 1:3]) <= (r[k, 0] - r[-1, 0]) * cot_y_gs]
+            else:
+                #constraints += [cp.norm(E*(r[k, :]- rp3)) - c.T*(r[k, :]- rp3) <= 0 ] # glideslope, full generality # (5)
+                #constraints += [cp.norm((r[k,:]-rT)[0:2]) - c.T[0]*(r[k,0]-rT[0]) <= 0] # glideslope, specific, but faster
+                constraints += [r[k, 0] >= cp.norm(r[k, :]) * sin_y_gs]
             constraints += [cp.norm(v[k, :]) <= V_max]  # velocity
 
             constraints += [cp.norm(u[k, :]) <= s[k]]  # limit thrust magnitude & also therefore, mass

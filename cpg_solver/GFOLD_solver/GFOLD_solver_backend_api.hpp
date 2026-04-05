@@ -15,6 +15,7 @@ struct GFOLDBackendConfig {
     double r0[3] = {0.0, 0.0, 0.0};
     double v0[3] = {0.0, 0.0, 0.0};
     double glide_slope_deg = 0.0;
+    double cot_y_gs = 0.0;
     double max_angle_deg = 0.0;
 };
 
@@ -57,4 +58,3 @@ struct GFOLDBackendOutput {
     GFOLDBackendLimits limits{};
     double terminal_mass = 0.0;
 };
-
