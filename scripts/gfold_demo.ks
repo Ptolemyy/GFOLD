@@ -1,7 +1,10 @@
 // ===== Defaults (can be overridden by config.txt via RUNPATH) =====
 // LaunchPad reference coordinates:
-//   SET LAT0 TO -0.0972.
-//   SET LON0 TO -74.5577.
+//   SET LAT0 TO -0.0973500171719741.
+//   SET LON0 TO -74.5578827127144.
+//   VAB coordinates:
+//   SET LAT0 TO -0.096779520816.
+//   SET LON0 TO -74.617401641155.
 SET LAT0 TO -0.0972.
 SET LON0 TO -74.5577.
 
@@ -11,7 +14,7 @@ SET THETA_DEG TO 45.      // thrust cone half-angle (deg)
 SET YGS_DEG TO 30.        // glide slope angle (deg)
 SET MODE0_t TO 0.48.       // mode0 virtual altitude offset (m)
 SET MODE0_A TO 9.4.       // mode0 acceleration for VU correction (m/s^2)
-SET UP_BIAS_M TO -4.        // altitude bias added to reported UP_M in mode0/mode1
+SET UP_BIAS_M TO -3.6.        // altitude bias added to reported UP_M in mode0/mode1
 SET CUTDOWN_ALTITUDE TO 2.0. // hard engine cutoff altitude using raw UP_M (no bias)
 SET U_ZERO_SPEED TO 1.   // trigger U zero when total speed drops below this (m/s)
 SET RECOMPUTE_ENABLED TO 1. // set to 1 to enable recompute trigger
@@ -21,6 +24,7 @@ SET LAST_RECOMPUTE_TIME TO 0.
 SET RECOMPUTE_BEGIN_TIME TO -1.   // wall-clock start time for latest mode1 recompute request
 SET RESEND_TIME TO 0.1.      // resend state interval when waiting for reply
 SET DEPLOY_GEAR_TIME TO 7.5. // deploy gear when remain_tf <= this value
+SET DEPLOY_GEAR_ENABLED TO 1. // set to 0 to disable automatic gear deployment
 
 SET CYL_HEIGHT TO 3.8.
 SET CYL_RADIUS TO 1.3.
@@ -32,9 +36,7 @@ SET AREA_trans TO CONSTANT:PI * CYL_HEIGHT * CYL_RADIUS / 2 + 15.
 SET AREA_axis TO 1.63.
 // ===== Optional config override =====
 // Provide a config.txt in the same directory with lines like:
-//   LaunchPad coordinates:
-//   SET LAT0 TO -0.096779520816.
-//   SET LON0 TO -74.617401641155.
+
 //   SET ALT0 TO 0.
 //   SET THROT1 TO 0.2.
 //   SET THROT2 TO 0.8.
@@ -42,6 +44,7 @@ SET AREA_axis TO 1.63.
 //   SET YGS_DEG TO 30.
 //   SET MODE0_H TO 3.5.
 //   SET MODE0_A TO 9.8.
+//   SET DEPLOY_GEAR_ENABLED TO 1.
 
 SET CONFIG_FILE TO "config.txt".
 IF EXISTS(CONFIG_FILE) { RUNPATH(CONFIG_FILE). }.
@@ -55,6 +58,7 @@ IF EXISTS(CONFIG_FILE) { RUNPATH(CONFIG_FILE). }.
 //   (B) Full profile: COMPUTE_FINISH + many U lines (up,north,east,t_abs) -> update U_LIST.
 //   (C) "COMPUTE_FINISH,2" -> infeasible/no usable profile, disable recompute.
 //   (D) "REMAIN_TF,<seconds>" -> remaining trajectory time from CPP.
+//   (E) "REQUEST_MODE0,1,<reason>" -> ask us to resend mode0 state.
 // Explicitly use Archive volume paths to match PC-side writes.
 SET SEND_FILE TO "0:/send.txt".
 SET RECV_FILE TO "0:/receive.txt".
@@ -79,6 +83,8 @@ SET U_START_TIME TO 0.       // time origin for U selection
 SET U_TF TO 0.               // total time span for U_LIST
 SET U_T0 TO 0.               // first absolute t from solver
 SET REMAIN_TF TO -1.         // remain tf from cpp; -1 means unknown
+SET REMAIN_TF_REF TO -1.     // remain tf snapshot from latest solver response
+SET REMAIN_TF_REF_TIME TO 0. // ELAPSED_SEC when REMAIN_TF_REF was received
 SET LAST_TICK TO TIME:SECONDS.
 SET LAST_U_TICK TO 0.
 SET LAST_PRINT_TICK TO 0.
@@ -294,22 +300,39 @@ FUNCTION SEND_STATE {
   //  SET SEND_UP_M TO UP_M - (VU * MODE0_t + 0.5 * MODE0_A * MODE0_t * MODE0_t).
   //  SET SEND_VU TO VU + (MODE0_A * MODE0_t).
   //}.
-  SET OUT_LINE TO INFO_IN + "," +
-                ROUND(SEND_UP_M + UP_BIAS_M,1) + "," +
-                ROUND(NORTH_M,1) + "," +
-                ROUND(EAST_M,1) + "," +
-                ROUND(SEND_VU,2) + "," +
-                ROUND(VN,2) + "," +
-                ROUND(VE,2) + "," +
-                ROUND(SPEED,2) + "," +
-                ROUND(THRUST_MAX,3) + "," +
-                ROUND(ISP_CUR,3) + "," +
-                ROUND(MASS_WET,3) + "," +
-                ROUND(THROT1,2) + "," +
-                ROUND(THROT2,2) + "," +
-                ROUND(THETA_DEG,1) + "," +
-                ROUND(YGS_DEG,1) + "," +
-                ROUND(ELAPSED_SEC,2).
+  IF INFO_IN = "0" {
+    // Full mode0 payload includes guidance knobs.
+    SET OUT_LINE TO INFO_IN + "," +
+                  ROUND(SEND_UP_M + UP_BIAS_M,1) + "," +
+                  ROUND(NORTH_M,1) + "," +
+                  ROUND(EAST_M,1) + "," +
+                  ROUND(SEND_VU,2) + "," +
+                  ROUND(VN,2) + "," +
+                  ROUND(VE,2) + "," +
+                  ROUND(SPEED,2) + "," +
+                  ROUND(THRUST_MAX,3) + "," +
+                  ROUND(ISP_CUR,3) + "," +
+                  ROUND(MASS_WET,3) + "," +
+                  ROUND(THROT1,2) + "," +
+                  ROUND(THROT2,2) + "," +
+                  ROUND(THETA_DEG,1) + "," +
+                  ROUND(YGS_DEG,1) + "," +
+                  ROUND(ELAPSED_SEC,2).
+  } ELSE {
+    // Compact payload for mode1/info/end: reuse mode0 guidance knobs on PC side.
+    SET OUT_LINE TO INFO_IN + "," +
+                  ROUND(SEND_UP_M + UP_BIAS_M,1) + "," +
+                  ROUND(NORTH_M,1) + "," +
+                  ROUND(EAST_M,1) + "," +
+                  ROUND(SEND_VU,2) + "," +
+                  ROUND(VN,2) + "," +
+                  ROUND(VE,2) + "," +
+                  ROUND(SPEED,2) + "," +
+                  ROUND(THRUST_MAX,3) + "," +
+                  ROUND(ISP_CUR,3) + "," +
+                  ROUND(MASS_WET,3) + "," +
+                  ROUND(ELAPSED_SEC,2).
+  }.
 
   LOG OUT_LINE TO SEND_FILE.
   SET SEND_STATE_TIME TO TIME:SECONDS.
@@ -332,6 +355,7 @@ FUNCTION READ_SOLVER_OUTPUT {
   SET NEW_U_LIST TO LIST().
   SET HAS_NEW_REMAIN_TF TO 0.
   SET NEW_REMAIN_TF TO REMAIN_TF.
+  SET HAS_MODE0_RETRY_REQ TO 0.
 
   SET RECV_LINE TO RECV_LINE:REPLACE(CR, "").
   SET RECV_LINES TO RECV_LINE:SPLIT(LF).
@@ -346,6 +370,8 @@ FUNCTION READ_SOLVER_OUTPUT {
         } ELSE IF PARTS[0] = "COMPUTE_FINISH" AND PARTS[1]:STARTSWITH("2") {
           SET HAS_FINISH TO 1.
           SET FINISH_CODE TO 2.
+        } ELSE IF PARTS[0] = "REQUEST_MODE0" AND PARTS[1]:STARTSWITH("1") {
+          SET HAS_MODE0_RETRY_REQ TO 1.
         } ELSE IF PARTS[0] = "U" AND PARTS:LENGTH >= 5 {
           SET U_UP TO PARTS[1]:TONUMBER.
           SET U_NORTH TO PARTS[2]:TONUMBER.
@@ -364,6 +390,15 @@ FUNCTION READ_SOLVER_OUTPUT {
   SET loop_ms TO t_loop_end_ms - t_loop_start_ms.
 //  PRINT "recv_lines loop(ms)=" + loop_ms + " lines=" + RECV_LINES:LENGTH.
 
+  IF HAS_MODE0_RETRY_REQ = 1 {
+    SET rf_mode0 TO OPEN(RECV_FILE).
+    rf_mode0:CLEAR().
+    DELETEPATH(RECV_FILE).
+    PRINT "MODE0_RETRY_REQUESTED_BY_PC".
+    SEND_STATE("0").
+    RETURN.
+  }.
+
   IF HAS_FINISH = 1 {
     IF RECOMPUTE_BEGIN_TIME >= 0 {
       SET RECOMPUTE_TIME TO TIME:SECONDS - RECOMPUTE_BEGIN_TIME.
@@ -374,6 +409,7 @@ FUNCTION READ_SOLVER_OUTPUT {
       SET RECOMPUTE_ENABLED TO 0.
       SET RECOMPUTE_PENDING TO 0.
       SET REMAIN_TF TO -1.
+      SET REMAIN_TF_REF TO -1.
 //      PRINT "RECOMPUTE_DISABLED_BY_PC".
       SET rf2 TO OPEN(RECV_FILE).
       rf2:CLEAR().
@@ -386,11 +422,13 @@ FUNCTION READ_SOLVER_OUTPUT {
       SET U_LIST TO NEW_U_LIST.
       SET HAS_U_LIST TO 1.
       SET HAS_CUR_U TO 0.
-      SET U_START_TIME TO ELAPSED_SEC.
       SET U_T0 TO U_LIST[0][3].
+      // Keep timeline anchored to solver absolute time.
+      // U timestamps from PC are absolute (same axis as ELAPSED_SEC).
+      SET U_START_TIME TO U_T0.
       // derive total horizon from first/last U time
       IF U_LIST:LENGTH > 1 {
-        SET U_TF TO U_LIST[U_LIST:LENGTH - 1][3] - U_LIST[0][3].
+        SET U_TF TO U_LIST[U_LIST:LENGTH - 1][3] - U_T0.
         IF U_TF < 0 { SET U_TF TO -U_TF. }.
         IF U_TF = 0 { SET U_TF TO LOOP_DT. }.
       } ELSE {
@@ -399,8 +437,12 @@ FUNCTION READ_SOLVER_OUTPUT {
       IF HAS_NEW_REMAIN_TF = 1 {
         SET REMAIN_TF TO NEW_REMAIN_TF.
       } ELSE {
-        SET REMAIN_TF TO U_TF.
+        LOCAL NEW_T_LAST IS U_LIST[U_LIST:LENGTH - 1][3].
+        SET REMAIN_TF TO NEW_T_LAST - ELAPSED_SEC.
+        IF REMAIN_TF < 0 { SET REMAIN_TF TO 0. }.
       }.
+      SET REMAIN_TF_REF TO REMAIN_TF.
+      SET REMAIN_TF_REF_TIME TO ELAPSED_SEC.
 //      PRINT "U_LIST updated: len=" + U_LIST:LENGTH + " tf=" + U_TF.
 //      PRINT "TF_10_LINES=" + U_TF.
     }.
@@ -413,15 +455,13 @@ FUNCTION READ_SOLVER_OUTPUT {
   }.
 }
 
-// Select U based on elapsed time since U_START_TIME (no U_INDEX).
+// Select U using absolute timeline (ELAPSED_SEC aligns with solver t_abs).
 FUNCTION SELECT_U {
   IF HAS_U_LIST = 0 { RETURN. }.
   IF U_LIST:LENGTH = 0 { RETURN. }.
 
-  LOCAL t_elapsed IS ELAPSED_SEC - U_START_TIME.
-  IF t_elapsed < 0 { SET t_elapsed TO 0. }.
-  // Map kOS elapsed to solver absolute timeline starting at U_T0
-  LOCAL t_abs IS U_T0 + t_elapsed.
+  LOCAL t_abs IS ELAPSED_SEC.
+  IF t_abs < U_T0 { SET t_abs TO U_T0. }.
 
   LOCAL LAST_IDX IS U_LIST:LENGTH - 1.
   LOCAL U_LAST IS U_LIST[LAST_IDX].
@@ -431,7 +471,7 @@ FUNCTION SELECT_U {
     RETURN.
   }.
 
-  SET U_TF TO T_LAST - U_LIST[0][3].
+  SET U_TF TO T_LAST - U_T0.
   IF U_TF < 0 { SET U_TF TO -U_TF. }.
   IF U_TF = 0 { SET U_TF TO LOOP_DT. }.
 
@@ -475,19 +515,39 @@ SEND_STATE("0").
 //PRINT "SEND MODE0".
 
 // ===== Wait for initial mode0 response =====
-// Block until PC creates receive.txt (mode0 done). Then delete it and continue.
-UNTIL EXISTS(RECV_FILE) {
-  WAIT 0.
+// Keep retrying mode0 until PC no longer requests REQUEST_MODE0.
+SET MODE0_READY TO 0.
+UNTIL MODE0_READY = 1 {
+  UNTIL EXISTS(RECV_FILE) {
+    WAIT 0.
+  }.
+  SET RF0_LINE TO OPEN(RECV_FILE):READALL:STRING.
+  SET MODE0_RETRY_REQ TO 0.
+  SET RF0_LINE TO RF0_LINE:REPLACE(CR, "").
+  SET RF0_LINES TO RF0_LINE:SPLIT(LF).
+  FOR L IN RF0_LINES {
+    IF L <> "" {
+      SET PARTS TO L:SPLIT(",").
+      IF PARTS:LENGTH >= 2 {
+        IF PARTS[0] = "REQUEST_MODE0" AND PARTS[1]:STARTSWITH("1") {
+          SET MODE0_RETRY_REQ TO 1.
+        } ELSE IF PARTS[0] = "COMPUTE_FINISH" AND PARTS[1]:STARTSWITH("2") {
+          // Backward compatibility: treat init fail as request to resend mode0.
+          SET MODE0_RETRY_REQ TO 1.
+        }.
+      }.
+    }.
+  }.
+  SET rf0 TO OPEN(RECV_FILE).
+  rf0:CLEAR().
+  DELETEPATH(RECV_FILE).
+  IF MODE0_RETRY_REQ = 1 {
+    PRINT "MODE0_RETRY_REQUESTED_BY_PC_INIT".
+    SEND_STATE("0").
+  } ELSE {
+    SET MODE0_READY TO 1.
+  }.
 }.
-SET RF0_LINE TO OPEN(RECV_FILE):READALL:STRING.
-IF RF0_LINE:CONTAINS("COMPUTE_FINISH,2") {
-  SET RECOMPUTE_ENABLED TO 0.
-  SET RECOMPUTE_PENDING TO 0.
-//  PRINT "RECOMPUTE_DISABLED_BY_PC_INIT".
-}.
-SET rf0 TO OPEN(RECV_FILE).
-rf0:CLEAR().
-DELETEPATH(RECV_FILE).
 SET TIME0_SEC TO TIME:SECONDS.
 SET LOOP_INDEX TO 0.
 SET HAS_U_LIST TO 0.
@@ -497,6 +557,10 @@ FUNCTION MAIN_TICK {
   IF RUN_ACTIVE = 0 { RETURN. }.
   SET NOW_SEC TO TIME:SECONDS.
   SET ELAPSED_SEC TO NOW_SEC - TIME0_SEC.
+  IF REMAIN_TF_REF >= 0 {
+    SET REMAIN_TF TO REMAIN_TF_REF - (ELAPSED_SEC - REMAIN_TF_REF_TIME).
+    IF REMAIN_TF < 0 { SET REMAIN_TF TO 0. }.
+  }.
 
   // Read raw state once per tick; UP_M here is un-biased.
   SET STATE TO CALC_STATE().
@@ -523,7 +587,7 @@ FUNCTION MAIN_TICK {
     RETURN.
   }.
 
-  IF GEAR_DEPLOYED = 0 AND REMAIN_TF >= 0 AND REMAIN_TF <= DEPLOY_GEAR_TIME {
+  IF DEPLOY_GEAR_ENABLED = 1 AND GEAR_DEPLOYED = 0 AND REMAIN_TF >= 0 AND REMAIN_TF <= DEPLOY_GEAR_TIME {
     GEAR ON.
     SET GEAR_DEPLOYED TO 1.
 //    PRINT "GEAR_DEPLOY remain_tf=" + ROUND(REMAIN_TF,2).
@@ -580,7 +644,6 @@ FUNCTION PRINT_TICK {
   PRINT "remain_tf=" + ROUND(REMAIN_TF,3).
   PRINT "recompute_time=" + ROUND(RECOMPUTE_TIME,4).
   PRINT "mass=" + ROUND(SHIP:MASS,3).
-  PRINT "F_d_trans=" + ROUND(F_d_trans_mag,2).
 }
 
 // ===== Schedule tick via WHEN =====

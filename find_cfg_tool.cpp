@@ -11,6 +11,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 #include <iostream>
 
@@ -180,7 +181,21 @@ struct DebugModeInput {
     double elapsed_sec = std::numeric_limits<double>::quiet_NaN();
     bool direct_mode = false;
     int solver_n = -1; // optional override
+    enum class SearchMode {
+        Auto,
+        Tf,
+        Throt
+    };
+    SearchMode search_mode = SearchMode::Auto;
 };
+
+static const char* to_string(DebugModeInput::SearchMode mode) {
+    switch (mode) {
+        case DebugModeInput::SearchMode::Tf: return "tf";
+        case DebugModeInput::SearchMode::Throt: return "throt";
+        default: return "auto";
+    }
+}
 
 static bool parse_solver_n_input(std::string s, int& out_n) {
     s = trim_copy(s);
@@ -209,6 +224,44 @@ static bool parse_solver_n_input(std::string s, int& out_n) {
     } catch (...) {
         return false;
     }
+}
+
+static bool parse_yes_no_input(std::string s, bool& out) {
+    s = trim_copy(s);
+    if (s.empty()) return false;
+    for (char& c : s) {
+        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    }
+    if (s == "y" || s == "yes" || s == "1" || s == "true") {
+        out = true;
+        return true;
+    }
+    if (s == "n" || s == "no" || s == "0" || s == "false") {
+        out = false;
+        return true;
+    }
+    return false;
+}
+
+static bool parse_search_mode_input(std::string s, DebugModeInput::SearchMode& out_mode) {
+    s = trim_copy(s);
+    if (s.empty()) return false;
+    for (char& c : s) {
+        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    }
+    if (s == "tf") {
+        out_mode = DebugModeInput::SearchMode::Tf;
+        return true;
+    }
+    if (s == "throt" || s == "throttle" || s == "throt2" || s == "t2") {
+        out_mode = DebugModeInput::SearchMode::Throt;
+        return true;
+    }
+    if (s == "auto") {
+        out_mode = DebugModeInput::SearchMode::Auto;
+        return true;
+    }
+    return false;
 }
 
 static bool parse_debug_mode_input(std::string s, DebugModeInput& out) {
@@ -459,6 +512,78 @@ static Bracket coarse_bracket(GFOLDSolver& solver, GFOLDConfig& cfg,
     return out;
 }
 
+struct ThrottleSearchResult {
+    double best_throttle_max = 1.0;
+    long long solve_calls = 0;
+    bool feasible = false;
+    std::vector<double> throttle_max_samples;
+    std::vector<double> mass_samples;
+};
+
+static ThrottleSearchResult search_min_feasible_throttle_max(
+    const GFOLDConfig& cfg_in,
+    double throttle_lo,
+    double throttle_hi = 1.0,
+    int iters = 20) {
+    ThrottleSearchResult res;
+    constexpr double eps = 1e-9;
+
+    double lo = std::max(0.0, throttle_lo);
+    double hi = std::min(1.0, throttle_hi);
+    if (hi <= lo + eps) return res;
+
+    GFOLDSolver solver(cfg_in);
+    auto eval_feasible = [&](double throttle_max) -> bool {
+        res.solve_calls++;
+        GFOLDConfig trial = cfg_in;
+        trial.throttle_max = throttle_max;
+        solver.set_config(trial);
+        if (!solver.solve()) return false;
+
+        const double m = solver.terminal_mass();
+        if (!std::isfinite(m)) return false;
+        res.throttle_max_samples.push_back(throttle_max);
+        res.mass_samples.push_back(m);
+        return true;
+    };
+
+    // Dense area scan on full range, then refine around the left-most feasible point.
+    const int coarse_points = std::max(160, iters * 12); // iters=20 -> 240 points
+    const double coarse_step = (hi - lo) / static_cast<double>(coarse_points);
+
+    bool has_feasible = false;
+    double best_throt = hi;
+    for (int i = 0; i <= coarse_points; ++i) {
+        const double t = (i == coarse_points) ? hi : (lo + coarse_step * static_cast<double>(i));
+        if (eval_feasible(t)) {
+            if (!has_feasible || t < best_throt) {
+                has_feasible = true;
+                best_throt = t;
+            }
+        }
+    }
+
+    if (!has_feasible) return res;
+
+    // Local refinement near the best coarse candidate.
+    const int refine_points = std::max(100, iters * 6); // iters=20 -> 120 points
+    const double refine_lo = std::max(lo, best_throt - coarse_step);
+    const double refine_hi = best_throt;
+    if (refine_hi > refine_lo + eps) {
+        const double refine_step = (refine_hi - refine_lo) / static_cast<double>(refine_points);
+        for (int i = 0; i <= refine_points; ++i) {
+            const double t = (i == refine_points)
+                                 ? refine_hi
+                                 : (refine_lo + refine_step * static_cast<double>(i));
+            if (eval_feasible(t) && t < best_throt) best_throt = t;
+        }
+    }
+
+    res.feasible = true;
+    res.best_throttle_max = best_throt;
+    return res;
+}
+
 // Golden-section maximize inside feasible bracket.
 static std::pair<double,double> golden_maximize(
     GFOLDSolver& solver, GFOLDConfig& cfg,
@@ -542,6 +667,7 @@ int main(int argc, char** argv)
     bool has_user_center = false;
     double user_center = std::numeric_limits<double>::quiet_NaN();
     bool direct_mode = false;
+    DebugModeInput::SearchMode search_mode = DebugModeInput::SearchMode::Auto;
     std::string selected_sheet_name;
 
     // Optional override:
@@ -573,20 +699,60 @@ int main(int argc, char** argv)
         fs::path latest_csv;
         if (find_latest_run_csv(fs::current_path(), latest_csv)) {
             std::cout << "[debug] latest_csv=" << latest_csv.string() << "\n";
-            std::cout << "[debug] input elapsed time (e.g. 36, d36, 36 n50, d36 n=25), empty to skip: ";
-            std::string input;
-            if (std::getline(std::cin, input)) {
-                input = trim_copy(input);
-                if (!input.empty()) {
-                    DebugModeInput parsed_input;
-                    if (!parse_debug_mode_input(input, parsed_input)) {
-                        std::cout << "[debug] invalid_time=" << input << "\n";
+            std::cout << "[debug] input elapsed time (e.g. 36), empty to skip: ";
+            std::string input_elapsed;
+            if (std::getline(std::cin, input_elapsed)) {
+                input_elapsed = trim_copy(input_elapsed);
+                if (!input_elapsed.empty()) {
+                    double elapsed_sec = std::numeric_limits<double>::quiet_NaN();
+                    if (!parse_elapsed_input(input_elapsed, elapsed_sec)) {
+                        std::cout << "[debug] invalid_time=" << input_elapsed << "\n";
                         return 1;
                     }
 
+                    bool user_direct = false;
+                    std::cout << "[debug] direct mode? (y/n, default n): ";
+                    std::string input_direct;
+                    if (std::getline(std::cin, input_direct)) {
+                        input_direct = trim_copy(input_direct);
+                        if (!input_direct.empty()) {
+                            if (!parse_yes_no_input(input_direct, user_direct)) {
+                                std::cout << "[debug] invalid_direct=" << input_direct << "\n";
+                                return 1;
+                            }
+                        }
+                    }
+
+                    int user_solver_n = -1;
+                    std::cout << "[debug] solver_n override? (10/25/50/100, empty keep): ";
+                    std::string input_n;
+                    if (std::getline(std::cin, input_n)) {
+                        input_n = trim_copy(input_n);
+                        if (!input_n.empty()) {
+                            if (!parse_solver_n_input(input_n, user_solver_n)) {
+                                std::cout << "[debug] invalid_solver_n=" << input_n << "\n";
+                                return 1;
+                            }
+                        }
+                    }
+
+                    DebugModeInput::SearchMode user_search_mode = DebugModeInput::SearchMode::Auto;
+                    std::cout << "[debug] search mode? (tf/throt/auto, default auto): ";
+                    std::string input_search_mode;
+                    if (std::getline(std::cin, input_search_mode)) {
+                        input_search_mode = trim_copy(input_search_mode);
+                        if (!input_search_mode.empty()) {
+                            if (!parse_search_mode_input(input_search_mode, user_search_mode)) {
+                                std::cout << "[debug] invalid_search_mode=" << input_search_mode << "\n";
+                                return 1;
+                            }
+                        }
+                    }
+
                     has_user_center = true;
-                    user_center = parsed_input.elapsed_sec;
-                    direct_mode = parsed_input.direct_mode;
+                    user_center = elapsed_sec;
+                    direct_mode = user_direct;
+                    search_mode = user_search_mode;
 
                     std::string cfg_text;
                     if (load_cfg_from_run_csv_by_time(latest_csv, user_center, selected_sheet_name, cfg_text)) {
@@ -594,13 +760,15 @@ int main(int argc, char** argv)
                                   << "selected_sheet=" << selected_sheet_name << "\n";
                         std::cout << (direct_mode ? "[direct] " : "[debug] ")
                                   << "cfg=" << cfg_text << "\n";
+                        std::cout << (direct_mode ? "[direct] " : "[debug] ")
+                                  << "search_mode=" << to_string(search_mode) << "\n";
                         if (!apply_cfg_string(cfg, cfg_text)) {
                             std::cerr << "failed to parse cfg from latest csv\n";
                             return 1;
                         }
-                        if (parsed_input.solver_n > 0) {
-                            cfg.solver_n = parsed_input.solver_n;
-                            cfg.steps = parsed_input.solver_n;
+                        if (user_solver_n > 0) {
+                            cfg.solver_n = user_solver_n;
+                            cfg.steps = user_solver_n;
                         }
                     } else {
                         std::cout << "[debug] lookup_failed t=" << user_center << "s\n";
@@ -622,13 +790,44 @@ int main(int argc, char** argv)
             return 1;
         }
         solver.set_config(cfg);
-        const bool ok = solver.solve();
+        bool ok = solver.solve();
         std::cout << "[direct] n=" << cfg.solver_n
                   << " tf=" << cfg.tf
                   << " status=" << solver.status() << "\n";
-        if (!ok) {
+        if (search_mode == DebugModeInput::SearchMode::Throt) {
+            auto throt_retry = search_min_feasible_throttle_max(cfg, cfg.throttle_max, 1.0, 20);
+            if (throt_retry.feasible) {
+                cfg.throttle_max = throt_retry.best_throttle_max;
+                std::cout << "[direct] throt_search ok throt2=" << cfg.throttle_max
+                          << " calls=" << throt_retry.solve_calls << "\n";
+                solver.set_config(cfg);
+                ok = solver.solve();
+                std::cout << "[direct] retry status=" << solver.status() << "\n";
+            } else {
+                std::cout << "[direct] throt_search infeasible calls="
+                          << throt_retry.solve_calls << " (keep current solve)\n";
+            }
+            if (!ok) return 0;
+        } else if (!ok) {
             std::cout << "[direct] infeasible at tf=" << cfg.tf << "\n";
-            return 0;
+            const bool use_throt_search =
+                (search_mode == DebugModeInput::SearchMode::Throt) ||
+                (search_mode == DebugModeInput::SearchMode::Auto && cfg.tf < 5.0);
+            if (use_throt_search) {
+                auto throt_retry = search_min_feasible_throttle_max(cfg, cfg.throttle_max, 1.0, 20);
+                if (throt_retry.feasible) {
+                    cfg.throttle_max = throt_retry.best_throttle_max;
+                    std::cout << "[direct] throt_search ok throt2=" << cfg.throttle_max
+                              << " calls=" << throt_retry.solve_calls << "\n";
+                    solver.set_config(cfg);
+                    ok = solver.solve();
+                    std::cout << "[direct] retry status=" << solver.status() << "\n";
+                } else {
+                    std::cout << "[direct] throt_search infeasible calls="
+                              << throt_retry.solve_calls << "\n";
+                }
+            }
+            if (!ok) return 0;
         }
         const double direct_m = solver.terminal_mass();
         std::cout << "[direct] terminal_m=" << direct_m << "\n";
@@ -685,34 +884,124 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    double tf_min = 1.0;
-    double tf_max = 6.0;
-    if (has_user_center && std::isfinite(user_center)) {
-        tf_min = user_center - 5.0;
-        tf_max = user_center + 5.0;
-        if (tf_min < 0.1) tf_min = 0.1;
-        if (tf_max <= tf_min + 1e-6) tf_max = tf_min + 10.0;
+    Bracket br;
+    double best_tf = cfg.tf;
+    double best_m = -std::numeric_limits<double>::infinity();
+    std::vector<double> metric_x;
+    std::vector<double> metric_y;
+    std::string metric_x_label = "tf";
+    std::string metric_y_label = "m(tf)";
+    std::string metric_title = "m(tf) (feasible points only)";
+
+    const bool throt_only_mode = (search_mode == DebugModeInput::SearchMode::Throt);
+    if (throt_only_mode) {
+        std::cout << "[search] mode=throt n=" << cfg.solver_n
+                  << " tf_fixed=" << cfg.tf
+                  << " throt2_range=(" << cfg.throttle_max << ",1]\n";
+        auto throt_retry = search_min_feasible_throttle_max(cfg, cfg.throttle_max, 1.0, 20);
+        if (!throt_retry.feasible) {
+            std::cout << "No feasible throt2 in (" << cfg.throttle_max << ",1], calls="
+                      << throt_retry.solve_calls << "\n";
+            return 0;
+        }
+        cfg.throttle_max = throt_retry.best_throttle_max;
+        std::cout << "throt best = " << cfg.throttle_max
+                  << ", calls = " << throt_retry.solve_calls << "\n";
+        solver.set_config(cfg);
+        if (!solver.solve()) {
+            std::cout << "throt best solution infeasible, status = "
+                      << solver.status() << '\n';
+            return 0;
+        }
+        best_tf = cfg.tf;
+        best_m = solver.terminal_mass();
+        br.a = cfg.tf;
+        br.b = cfg.tf;
+        br.best_tf = cfg.tf;
+        br.best_m = best_m;
+        br.tfs.push_back(cfg.tf);
+        br.ms.push_back(best_m);
+
+        metric_x = throt_retry.throttle_max_samples;
+        metric_y = throt_retry.mass_samples;
+        if (metric_x.size() != metric_y.size()) {
+            metric_x.clear();
+            metric_y.clear();
+        }
+        if (metric_x.empty()) {
+            metric_x.push_back(cfg.throttle_max);
+            metric_y.push_back(best_m);
+        }
+        std::vector<std::pair<double, double>> pairs;
+        pairs.reserve(metric_x.size());
+        for (size_t i = 0; i < metric_x.size(); ++i) {
+            pairs.emplace_back(metric_x[i], metric_y[i]);
+        }
+        std::sort(pairs.begin(), pairs.end(),
+                  [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+        metric_x.clear();
+        metric_y.clear();
+        metric_x.reserve(pairs.size());
+        metric_y.reserve(pairs.size());
+        for (const auto& p : pairs) {
+            metric_x.push_back(p.first);
+            metric_y.push_back(p.second);
+        }
+        metric_x_label = "throt2";
+        metric_y_label = "m(throt2)";
+        metric_title = "m(throt2) (feasible points only)";
+    } else {
+        double tf_min = 1.0;
+        double tf_max = 6.0;
+        if (has_user_center && std::isfinite(user_center)) {
+            tf_min = user_center - 5.0;
+            tf_max = user_center + 5.0;
+            if (tf_min < 0.1) tf_min = 0.1;
+            if (tf_max <= tf_min + 1e-6) tf_max = tf_min + 10.0;
+        }
+        const double tf_step = 0.1;
+        std::cout << "[search] n=" << cfg.solver_n
+                  << " tf_range=[" << tf_min << "," << tf_max << "]\n";
+
+        br = coarse_bracket(solver, cfg, tf_min, tf_max, tf_step);
+        if (br.ms.empty()) {
+            std::cout << "No feasible tf in [" << tf_min << "," << tf_max << "].\n";
+            return 0;
+        }
+
+        std::cout << "coarse best tf = " << br.best_tf << ", m = " << br.best_m
+                  << " (feasible range approx [" << br.a << ", " << br.b << "])\n";
+
+        auto best_pair = golden_maximize(solver, cfg, br.a, br.b, /*max_iter=*/80, /*tol=*/1e-4);
+        best_tf = best_pair.first;
+        best_m = best_pair.second;
+        std::cout << "golden best tf = " << best_tf << ", m = " << best_m << "\n";
+
+        metric_x = br.tfs;
+        metric_y = br.ms;
     }
-    const double tf_step = 0.1;
-    std::cout << "[search] n=" << cfg.solver_n
-              << " tf_range=[" << tf_min << "," << tf_max << "]\n";
 
-    Bracket br = coarse_bracket(solver, cfg, tf_min, tf_max, tf_step);
-    if (br.ms.empty()) {
-        std::cout << "No feasible tf in [" << tf_min << "," << tf_max << "].\n";
-        return 0;
-    }
-
-    std::cout << "coarse best tf = " << br.best_tf << ", m = " << br.best_m
-              << " (feasible range approx [" << br.a << ", " << br.b << "])\n";
-
-    auto [best_tf, best_m] = golden_maximize(solver, cfg, br.a, br.b, /*max_iter=*/80, /*tol=*/1e-4);
-    std::cout << "golden best tf = " << best_tf << ", m = " << best_m << "\n";
-
-    //cfg.tf = best_tf;
     cfg.tf = best_tf;
     solver.set_config(cfg);
-    if (!solver.solve()) {
+    bool ok = solver.solve();
+    const bool use_throt_search_after_tf =
+        (search_mode == DebugModeInput::SearchMode::Throt) ||
+        (search_mode == DebugModeInput::SearchMode::Auto && cfg.tf < 5.0);
+    if (!ok && use_throt_search_after_tf) {
+        auto throt_retry = search_min_feasible_throttle_max(cfg, cfg.throttle_max, 1.0, 20);
+        if (throt_retry.feasible) {
+            cfg.throttle_max = throt_retry.best_throttle_max;
+            std::cout << "[search] throt_search ok throt2=" << cfg.throttle_max
+                      << " calls=" << throt_retry.solve_calls << "\n";
+            solver.set_config(cfg);
+            ok = solver.solve();
+            std::cout << "[search] retry status=" << solver.status() << "\n";
+        } else {
+            std::cout << "[search] throt_search infeasible calls="
+                      << throt_retry.solve_calls << "\n";
+        }
+    }
+    if (!ok) {
         std::cout << "Best tf solution infeasible, status = "
                   << solver.status() << '\n';
         return 0;
@@ -730,10 +1019,10 @@ int main(int argc, char** argv)
     );
 
     auto ax1 = fig.add_subplot(Args(6, 1, 1));
-    ax1.plot(Args(br.tfs, br.ms), Kwargs("color"_a = "blue", "linewidth"_a = 2.0));
-    ax1.set_xlabel(Args("tf"));
-    ax1.set_ylabel(Args("m(tf)"));
-    ax1.set_title(Args("m(tf) (feasible points only)"));
+    ax1.plot(Args(metric_x, metric_y), Kwargs("color"_a = "blue", "linewidth"_a = 2.0));
+    ax1.set_xlabel(Args(metric_x_label));
+    ax1.set_ylabel(Args(metric_y_label));
+    ax1.set_title(Args(metric_title));
     ax1.grid(Args(true));
 
     auto ax4 = fig.add_subplot(Args(6, 1, 4));

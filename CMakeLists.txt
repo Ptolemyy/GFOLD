@@ -19,6 +19,7 @@ add_subdirectory(cpg_solver)
 add_executable(test_solver main.cpp)
 add_executable(GFOLD_demo GFOLD_demo.cpp find_cfg.cpp plot_recv_mode0.cpp)
 add_executable(kos_pingpong kos_pingpong.cpp)
+add_executable(cfg_tool find_cfg_tool.cpp)
 
 set(GFOLD_BACKEND_DLL_TARGETS
     gfold_solver_backend_n3
@@ -62,3 +63,14 @@ target_link_libraries(GFOLD_demo
     matplotlibcpp17::matplotlibcpp17
 )
 copy_backend_runtime_deps(GFOLD_demo)
+
+target_include_directories(cfg_tool PUBLIC
+        ${Python3_INCLUDE_DIRS})
+
+target_link_libraries(cfg_tool
+    gfold_solver
+    ${Python3_LIBRARIES}
+    pybind11::embed
+    matplotlibcpp17::matplotlibcpp17
+)
+copy_backend_runtime_deps(cfg_tool)

@@ -92,6 +92,16 @@ static void write_compute_finish(const fs::path& recv_path, int status_code) {
     }
 }
 
+static void write_request_mode0(const fs::path& recv_path, const std::string& reason) {
+    std::ostringstream oss;
+    oss << "REQUEST_MODE0,1";
+    if (!reason.empty()) oss << "," << reason;
+    oss << "\n";
+    if (!atomic_write(recv_path, oss.str())) {
+//        std::cerr << "Failed to write receive.txt\n";
+    }
+}
+
 enum class IncomingType {
     Mode0,
     Mode1,
@@ -176,10 +186,15 @@ static bool try_parse_r_xyz(const std::vector<std::string>& tok, std::array<doub
 }
 
 static bool try_parse_v_enu_t(const std::vector<std::string>& tok, std::array<double, 4>& v_enu_t) {
-    // send format is: mode, up, north, east, vu, vn, ve, ..., elapsed_sec
-    if (tok.size() < 16) return false;
+    // send format (full):   mode,up,north,east,vu,vn,ve,speed,Tmax,Isp,m,th1,th2,theta,ygs,elapsed
+    // send format (compact):mode,up,north,east,vu,vn,ve,speed,Tmax,Isp,m,elapsed
+    if (tok.size() < 12) return false;
+    size_t t_idx = std::numeric_limits<size_t>::max();
+    if (tok.size() > 15) t_idx = 15;
+    else if (tok.size() > 11) t_idx = 11;
+    else return false;
     try {
-        v_enu_t[0] = std::stod(tok[15]); // t
+        v_enu_t[0] = std::stod(tok[t_idx]); // t
         v_enu_t[1] = std::stod(tok[4]);  // v_up
         v_enu_t[2] = std::stod(tok[5]);  // v_north
         v_enu_t[3] = std::stod(tok[6]);  // v_east
@@ -467,8 +482,10 @@ static std::string make_timestamp_csv_name() {
 static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDConfig& cfg, double* base_time_out) {
     // Expect at least: MODE,E,N,U,VE,VN,VU,SPEED,THRUST_MAX,ISP,MASS_WET
     if (tok.size() < 11) return false;
-    // Optional extra fields:
+    // Full optional fields (mode0):
     // [11]=THROT1, [12]=THROT2, [13]=THETA_DEG, [14]=YGS_DEG, [15]=ELAPSED_SEC
+    // Compact fields (mode1/info/end):
+    // [11]=ELAPSED_SEC
     try {
         // Solver assumes x-axis is altitude. Map ENU accordingly:
         cfg.r0[0] = std::stod(tok[1]); // U -> x (altitude)
@@ -483,15 +500,22 @@ static bool populate_cfg_from_tokens(const std::vector<std::string>& tok, GFOLDC
         cfg.Isp   = std::stod(tok[9]);            // s
         cfg.m0    = std::stod(tok[10]) * 1000.0;  // t -> kg
 
-        if (tok.size() > 11) cfg.throttle_min = std::stod(tok[11]);
-        if (tok.size() > 12) cfg.throttle_max = std::stod(tok[12]);
-        if (tok.size() > 13) cfg.max_angle_deg = std::stod(tok[13]);
-        if (tok.size() > 14) cfg.glide_slope_deg = std::stod(tok[14]);
+        const bool has_guidance_fields = (tok.size() > 14);
+        if (has_guidance_fields) {
+            cfg.throttle_min = std::stod(tok[11]);
+            cfg.throttle_max = std::stod(tok[12]);
+            cfg.max_angle_deg = std::stod(tok[13]);
+            cfg.glide_slope_deg = std::stod(tok[14]);
+        }
         if (base_time_out) *base_time_out = 0.0;
         cfg.elapsed_time = 0.0;
-        // Optional: elapsed time from kOS (index 15)
+        // Optional: elapsed time from kOS (full index 15, compact index 11)
         if (tok.size() > 15) {
             const double et = std::stod(tok[15]);
+            if (base_time_out) *base_time_out = et;
+            cfg.elapsed_time = et;
+        } else if (!has_guidance_fields && tok.size() > 11) {
+            const double et = std::stod(tok[11]);
             if (base_time_out) *base_time_out = et;
             cfg.elapsed_time = et;
         }
@@ -626,6 +650,11 @@ int main() {
     std::vector<double> mode0_last_vy;
     std::vector<double> mode0_last_vz;
     std::vector<double> mode0_last_m_traj;
+    bool has_mode0_guidance = false;
+    double mode0_throttle_min = 0.2;
+    double mode0_throttle_max = 0.8;
+    double mode0_theta_deg = 45.0;
+    double mode0_ygs_deg = 30.0;
     bool fallback_enabled = true;
     bool mode1_solver_enabled = true;
     TrajectoryCache last_traj;
@@ -900,6 +929,7 @@ int main() {
             mode0_last_vy.clear();
             mode0_last_vz.clear();
             mode0_last_m_traj.clear();
+            has_mode0_guidance = false;
             has_fail_solver_cfg = false;
             fail_solver_cfg = GFOLDConfig{};
             fail_solver_elapsed_sec = std::numeric_limits<double>::quiet_NaN();
@@ -919,15 +949,21 @@ int main() {
             cfg.elapsed_time = 0.0;
             if (!populate_cfg_from_tokens(tok, cfg, nullptr)) {
 //                std::cerr << "Parse error on line: " << line << "\n";
+                write_request_mode0(recv_path, "parse_error");
                 continue;
             }
             cfg.elapsed_time = 0.0;
+            mode0_throttle_min = cfg.throttle_min;
+            mode0_throttle_max = cfg.throttle_max;
+            mode0_theta_deg = cfg.max_angle_deg;
+            mode0_ygs_deg = cfg.glide_slope_deg;
+            has_mode0_guidance = true;
 
             const double L = 10.0, R = 90.0;
             SearchResult res = find_best_tf(cfg, L, R, 10, true);
 
             if (!res.feasible) {
-                write_compute_finish(recv_path, 2);
+                write_request_mode0(recv_path, "infeasible");
                 continue;
             }
 
@@ -985,6 +1021,12 @@ int main() {
 //                std::cerr << "Parse error on mode1 line: " << line << "\n";
                 continue;
             }
+            if (has_mode0_guidance) {
+                cfg.throttle_min = mode0_throttle_min;
+                cfg.throttle_max = mode0_throttle_max;
+                cfg.max_angle_deg = mode0_theta_deg;
+                cfg.glide_slope_deg = mode0_ygs_deg;
+            }
 
             if (last_traj.valid && last_traj.steps > 0 && last_traj.tf > 0.0) {
                 const int idx = closest_prior_index_by_r(last_traj, cfg.r0);
@@ -1009,7 +1051,8 @@ int main() {
                 ok = solver.solve(mode1_solver_n);
                 solver_state = ok ? "ok" : ("fail(" + std::to_string(solver.status()) + ")");
                 if (!ok) {
-                    if (fallback_enabled) {
+                    const bool allow_fallback = fallback_enabled || tf_short;
+                    if (allow_fallback) {
                         if (tf_short) {
                             fallback_state = "search_throt2";
                             ThrottleSearchResult retry_throt2 =
@@ -1021,6 +1064,8 @@ int main() {
                             } else {
                                 fallback_state = "ok_throt2";
                                 cfg.throttle_max = retry_throt2.best_throttle_max;
+                                mode0_throttle_max = cfg.throttle_max;
+                                has_mode0_guidance = true;
                                 apply_tf_rules(cfg, cfg.throttle_max, nominal_glide_slope_deg);
                                 apply_mode1_n_policy(cfg, recompute_time);
                                 log_mode1_cfg(cfg);
