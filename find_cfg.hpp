@@ -25,6 +25,20 @@ struct SearchResult {
     bool feasible = false;
 };
 
+struct ThrottleSearchResult {
+    double best_throttle_max = 1.0;
+    double elapsed_sec = 0.0;
+    long long solve_calls = 0;
+    bool feasible = false;
+};
+
 // Search for best tf in [a, b] (seconds) maximizing terminal mass.
 // If save_last_traj is true, store full u/r/v/m trajectory from the last evaluated feasible solve.
 SearchResult find_best_tf(const GFOLDConfig& cfg, double a, double b, int iters = 20, bool save_last_traj = false);
+
+// Search minimum feasible throttle_max in (throttle_lo, throttle_hi].
+ThrottleSearchResult find_min_feasible_throttle_max(
+    const GFOLDConfig& cfg,
+    double throttle_lo,
+    double throttle_hi = 1.0,
+    int iters = 20);

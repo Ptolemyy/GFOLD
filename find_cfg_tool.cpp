@@ -545,8 +545,8 @@ int main(int argc, char** argv)
     std::string selected_sheet_name;
 
     // Optional override:
-    //   find_tf "<cfg_text>"
-    //   find_tf --cfg-file <path>
+    //   find_cfg "<cfg_text>"
+    //   find_cfg --cfg-file <path>
     // cfg_text supports:
     //   n=<3|10|25|50|100>
     //   solver_n=<3|10|25|50|100>

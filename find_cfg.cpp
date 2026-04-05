@@ -1,4 +1,4 @@
-#include "find_tf_2.hpp"
+#include "find_cfg.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -134,6 +134,59 @@ SearchResult find_best_tf(const GFOLDConfig& cfg_in, double a, double b, int ite
             } else if (fu >= fv) {
                 v = u; fv = fu;
             }
+        }
+    }
+
+    auto t1 = clock::now();
+    res.elapsed_sec = std::chrono::duration<double>(t1 - t0).count();
+    return res;
+}
+
+ThrottleSearchResult find_min_feasible_throttle_max(
+    const GFOLDConfig& cfg_in,
+    double throttle_lo,
+    double throttle_hi,
+    int iters) {
+    using clock = std::chrono::steady_clock;
+    auto t0 = clock::now();
+
+    ThrottleSearchResult res;
+    constexpr double eps = 1e-9;
+
+    double lo = std::max(0.0, throttle_lo);
+    double hi = std::min(1.0, throttle_hi);
+    if (hi <= lo + eps) {
+        auto t1 = clock::now();
+        res.elapsed_sec = std::chrono::duration<double>(t1 - t0).count();
+        return res;
+    }
+
+    GFOLDSolver solver(cfg_in);
+    auto is_feasible = [&](double throttle_max) -> bool {
+        res.solve_calls++;
+        GFOLDConfig trial = cfg_in;
+        trial.throttle_max = throttle_max;
+        solver.set_config(trial);
+        return solver.solve();
+    };
+
+    if (!is_feasible(hi)) {
+        auto t1 = clock::now();
+        res.elapsed_sec = std::chrono::duration<double>(t1 - t0).count();
+        return res;
+    }
+
+    res.feasible = true;
+    res.best_throttle_max = hi;
+    for (int i = 0; i < iters; ++i) {
+        const double mid = 0.5 * (lo + hi);
+        if (mid <= lo + eps || hi <= mid + eps) break;
+
+        if (is_feasible(mid)) {
+            res.best_throttle_max = mid;
+            hi = mid;
+        } else {
+            lo = mid;
         }
     }
 

@@ -17,8 +17,7 @@ find_package(matplotlibcpp17 REQUIRED)
 add_subdirectory(cpg_solver)
 
 add_executable(test_solver main.cpp)
-add_executable(GFOLD_demo GFOLD_demo.cpp find_tf_2.cpp plot_recv_mode0.cpp)
-add_executable(find_tf find_tf.cpp)
+add_executable(GFOLD_demo GFOLD_demo.cpp find_cfg.cpp plot_recv_mode0.cpp)
 add_executable(kos_pingpong kos_pingpong.cpp)
 
 set(GFOLD_BACKEND_DLL_TARGETS
@@ -63,14 +62,3 @@ target_link_libraries(GFOLD_demo
     matplotlibcpp17::matplotlibcpp17
 )
 copy_backend_runtime_deps(GFOLD_demo)
-
-target_include_directories(find_tf PUBLIC 
-        ${Python3_INCLUDE_DIRS})
-
-target_link_libraries(find_tf 
-    gfold_solver
-    ${Python3_LIBRARIES} 
-    pybind11::embed
-    matplotlibcpp17::matplotlibcpp17
-)
-copy_backend_runtime_deps(find_tf)

@@ -1,5 +1,5 @@
 #include "GFOLD_solver.hpp"
-#include "find_tf_2.hpp"
+#include "find_cfg.hpp"
 
 #include <chrono>
 #include <condition_variable>
@@ -1003,61 +1003,83 @@ int main() {
             bool ok = false;
             std::string solver_state = "disabled";
             std::string fallback_state = "not_used";
-            bool fallback_called = false;
             TrajectoryCache active_traj;
             if (mode1_solver_enabled) {
                 int mode1_solver_n = cfg.solver_n;
                 ok = solver.solve(mode1_solver_n);
                 solver_state = ok ? "ok" : ("fail(" + std::to_string(solver.status()) + ")");
                 if (!ok) {
-                    if (tf_short) {
-                        cfg.throttle_max = 1.0;
-                    }
                     if (fallback_enabled) {
-                        fallback_called = true;
-                        const double tf_min = cfg.tf;
-                        const double tf_max = cfg.tf + 1.5;
-                        fallback_state = "search";
-
-                        GFOLDConfig search_cfg = cfg;
-                        search_cfg.throttle_max = cfg.throttle_max;
-                        search_cfg.glide_slope_deg = nominal_glide_slope_deg;
-                        SearchResult retry = find_best_tf(search_cfg, tf_min, tf_max, 4, false);
-                        if (!retry.feasible) {
-                            fallback_state = "infeasible";
-                            const bool at_min_solver_n = (cfg.solver_n <= 10);
-                            if (at_min_solver_n) {
+                        if (tf_short) {
+                            fallback_state = "search_throt2";
+                            ThrottleSearchResult retry_throt2 =
+                                find_min_feasible_throttle_max(cfg, cfg.throttle_max, 1.0, 8);
+                            if (!retry_throt2.feasible) {
+                                const bool at_min_solver_n = (cfg.solver_n <= 10);
+                                fallback_state = at_min_solver_n ? "infeasible_throt2_min_n" : "infeasible_throt2";
                                 fallback_enabled = false;
+                            } else {
+                                fallback_state = "ok_throt2";
+                                cfg.throttle_max = retry_throt2.best_throttle_max;
+                                apply_tf_rules(cfg, cfg.throttle_max, nominal_glide_slope_deg);
+                                apply_mode1_n_policy(cfg, recompute_time);
+                                log_mode1_cfg(cfg);
+                                solver.set_config(cfg);
+                                mode1_solver_n = cfg.solver_n;
+                                ok = solver.solve(mode1_solver_n);
+                                if (!ok) {
+                                    solver_state = "fail(" + std::to_string(solver.status()) + ")";
+                                    fallback_state = "solve_fail_throt2";
+                                    fallback_enabled = false;
+                                } else {
+                                    solver_state = "ok";
+                                }
+                            }
+                        } else {
+                            const double tf_min = cfg.tf;
+                            const double tf_max = cfg.tf + 1.5;
+                            fallback_state = "search";
+
+                            GFOLDConfig search_cfg = cfg;
+                            search_cfg.throttle_max = cfg.throttle_max;
+                            search_cfg.glide_slope_deg = nominal_glide_slope_deg;
+                            SearchResult retry = find_best_tf(search_cfg, tf_min, tf_max, 4, false);
+                            if (!retry.feasible) {
+                                fallback_state = "infeasible";
+                                const bool at_min_solver_n = (cfg.solver_n <= 10);
+                                if (at_min_solver_n) {
+                                    fallback_enabled = false;
 //                                std::cerr << "[mode1] fallback infeasible at min solver n="
 //                                          << cfg.solver_n
 //                                          << ", return COMPUTE_FINISH,2\n";
-                                write_compute_finish(recv_path, 2);
-                                continue;
-                            }
-                            fallback_enabled = false;
+                                    write_compute_finish(recv_path, 2);
+                                    continue;
+                                }
+                                fallback_enabled = false;
 //                            std::cerr << "[mode1] fallback find_best_tf infeasible in ["
 //                                      << tf_min << ", " << tf_max
 //                                      << "], disable fallback and solver, reuse last trajectory\n";
-                        } else {
-                            fallback_state = "ok";
-                            cfg.tf = retry.best_tf;
-                            const double retry_throttle_max = cfg.throttle_max;
-                            apply_tf_rules(cfg, retry_throttle_max, nominal_glide_slope_deg);
-                            apply_mode1_n_policy(cfg, recompute_time);
-                            log_mode1_cfg(cfg);
-                            best_tf = retry.best_tf;
-                            solver.set_config(cfg);
-                            mode1_solver_n = cfg.solver_n;
-                            ok = solver.solve(mode1_solver_n);
-                            if (!ok) {
-                                solver_state = "fail(" + std::to_string(solver.status()) + ")";
-                                fallback_state = "solve_fail";
-                                fallback_enabled = false;
+                            } else {
+                                fallback_state = "ok";
+                                cfg.tf = retry.best_tf;
+                                const double retry_throttle_max = cfg.throttle_max;
+                                apply_tf_rules(cfg, retry_throttle_max, nominal_glide_slope_deg);
+                                apply_mode1_n_policy(cfg, recompute_time);
+                                log_mode1_cfg(cfg);
+                                best_tf = retry.best_tf;
+                                solver.set_config(cfg);
+                                mode1_solver_n = cfg.solver_n;
+                                ok = solver.solve(mode1_solver_n);
+                                if (!ok) {
+                                    solver_state = "fail(" + std::to_string(solver.status()) + ")";
+                                    fallback_state = "solve_fail";
+                                    fallback_enabled = false;
 //                                std::cerr << "[mode1] fallback solve failed, status="
 //                                          << solver.status() << " tf=" << cfg.tf
 //                                          << ", disable fallback and solver, reuse last trajectory\n";
-                            } else {
-                                solver_state = "ok";
+                                } else {
+                                    solver_state = "ok";
+                                }
                             }
                         }
                     } else {
@@ -1247,8 +1269,8 @@ int main() {
             const int mode1_solver_n = (cfg.solver_n > 0) ? cfg.solver_n : steps;
             const double tf_window = active_traj.tf * 10.0 / static_cast<double>(mode1_solver_n);
             std::cout << "[mode1] solver=" << solver_state
+                      << " fallback_state=" << fallback_state
                       << " fallback_enabled=" << (fallback_enabled ? 1 : 0)
-                      << " fallback_called=" << (fallback_called ? 1 : 0)
                       << " remaining_tf=" << active_traj.tf
                       << " n=" << mode1_solver_n
                       << " tf10_over_n=" << tf_window
